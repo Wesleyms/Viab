@@ -1,0 +1,2708 @@
+Attribute VB_Name = "D_CONTROLES_CAPA"
+Sub A_CadastroUnidades()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    If ºCODIGO_EMP("") <> "" And ºCOD_VERSÃO("") <> "" Then
+        Application.ScreenUpdating = False
+        Dim ºLinhasCriadas, ºLTBL, ºLTBL_2 As Double
+        Application.EnableEvents = False
+        Liberar_Deletar = False
+        ºLinhasCriadas = 0
+        'Call CarregarVelocidades
+        Call LOAD_PEP
+        Call CarregarBuffer
+        With CadastroUnidades.List_Tabela
+            With .ColumnHeaders
+                'adiciona colunas
+                .Add , , "Tipo", 55
+                .Add , , "Quantidade.", 65, lvwColumnCenter
+                .Add , , "Inicio", 55, lvwColumnCenter
+                .Add , , "% do VGV", 55, lvwColumnCenter
+                .Add , , "Cobrar Juros?", 65, lvwColumnCenter
+                .Add , , "Inicio Juros", 60, lvwColumnCenter
+                .Add , , "Fixar Inicio", 60, lvwColumnCenter
+                .Add , , "Fixar Final", 60, lvwColumnCenter
+                .Add , , "Mês de Encerramento", 100, lvwColumnCenter
+            End With
+            .View = lvwReport
+            .FullRowSelect = True
+        End With
+        ºLTBL = ThisWorkbook.Sheets("BD_CAD_VND").Cells(157, 2).End(xlUp).Row
+        For ºLTBL_2 = 108 To ºLTBL
+            CadastroUnidades.CB_Select_Tbl.AddItem ºLTBL_2 - 107 & " | " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLTBL_2, 2).Value
+        Next
+        ºLTBL = ThisWorkbook.Sheets("BD_CAD_VND").Cells(550, 2).End(xlUp).Row
+        For ºLTBL_2 = 523 To ºLTBL
+            CadastroUnidades.CB_TP_PARCELA.AddItem ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºLTBL_2).Value
+        Next
+        
+        CadastroUnidades.CB_Cobrar_Juros.AddItem "Sim"
+        CadastroUnidades.CB_Cobrar_Juros.AddItem "Não"
+        
+        CadastroUnidades.CB_FX_INICIO.AddItem "Sim"
+        CadastroUnidades.CB_FX_INICIO.AddItem "Não"
+    
+        CadastroUnidades.CB_FX_FIM.AddItem "Sim"
+        CadastroUnidades.CB_FX_FIM.AddItem "Não"
+        CadastroUnidades.CB_FTR_Condominio.AddItem "Por unidade"
+        CadastroUnidades.CB_FTR_Condominio.AddItem "Por m²"
+        CadastroUnidades.CB_FTR_IPTU.AddItem "Por unidade"
+        CadastroUnidades.CB_FTR_IPTU.AddItem "Por m²"
+        DoEvents
+        Call CarregarInfosTerreno
+        Call OrganizarTabIndex
+        Call CarregarLB_Fase_Tipologia
+        Call AttTipologias
+        Call CarregarTotais
+        Call ATT_P_cap
+        Call CarregarPerfil
+        Call CarregarFases
+        Call CarregarCurvasOB
+        Call TotalizarCusto
+        Call CarregarInfosTerreno
+        Call Carregar_CB_PERIODICIDADE
+        Call Carregar_LV_TI
+        Call Carregar_CB_FASES
+        Call Carregar_PRF_VND(0)
+        Call Carregar_Prmt_Terreno
+        Call Feed_List_Tipologias
+        
+        CadastroUnidades.OBSERVAÇÕES.Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("C898").Value
+        CadastroUnidades.DT_Base.Value = Format(ºDATA_BASE(""), "mm/YYYY")
+        CadastroUnidades.DT_Fase_1.Value = Format(ºDATA_FASE_1(""), "mm/YYYY")
+        CadastroUnidades.Associativo.Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value
+        Call CLIQUE_ASS
+        If CadastroUnidades.TB_TX_Permut_Fin <> "" Then
+            If Replace(CadastroUnidades.TB_TX_Permut_Fin, "%", "") > 0 Then
+                CadastroUnidades.CalcPermutaFis.Enabled = False
+            Else
+                CadastroUnidades.CalcPermutaFis.Enabled = True
+            End If
+        Else
+            CadastroUnidades.CalcPermutaFis.Enabled = True
+        End If
+    
+        If CadastroUnidades.TB_Percent_Permuta <> "" Then
+            If Replace(CadastroUnidades.TB_Percent_Permuta.Value, "%", "") > 0 Then
+                CadastroUnidades.CalcPermutaFin.Enabled = False
+            Else
+                CadastroUnidades.CalcPermutaFin.Enabled = True
+            End If
+        Else
+            CadastroUnidades.CalcPermutaFin.Enabled = True
+        End If
+        Eventos = True
+        CadastroUnidades.Show
+        ThisWorkbook.Sheets("BD_CAD_VND").Cells(1, 1).Value = True
+        Call AddIcon
+        Call AppTasklist(CadastroUnidades)
+        Call CARREGAR_CAPA
+        CadastroUnidades.MultiPage1.Value = 0
+        Call RefreshListViews
+    Else
+        MsgBox "Por gentileza, selecione um estudo."
+        RestoreExcelIcon
+        Application.DisplayAlerts = False
+        Application.Quit
+    End If
+End Sub
+Sub CLEARALL()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    'LIMPAR FLUXO
+    If ThisWorkbook.Sheets("Fluxo Operacional").UsedRange.Columns.Count > 4 Then
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(5).Address & ":" & Columns(ThisWorkbook.Sheets("Fluxo Operacional").UsedRange.Columns.Count).Address).Delete
+    End If
+    'LIMPAR TIPOLOGIAS
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B3:B32").Value = False
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C3:N32").ClearContents
+    'LIMPAR VAGAS
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B35:B54").Value = False
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C35:I54").ClearContents
+    'LIMPAR TABELA DE VENDAS
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("A108:FZ157").ClearContents
+    'LIMPAR CURVA DE VENDA
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("A57:N106").ClearContents
+    'LIMPAR CURVA DE OBRA
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B260:" & Cells(461, ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column).Address).ClearContents
+    'LIMPAR CUSTO DE OBRA
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B210:O259").ClearContents
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("S210:AZ259").ClearContents
+    'LIMPAR PERFIL DE TAXAS
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B159:T208").ClearContents
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B159").Value = True
+   'LIMPAR TERRENO
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C462:C471").ClearContents
+    'LIMPAR METRAGENS
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C498:D517").ClearContents
+    'LIMPAR PARTICIPAÇÃO PERMUTA
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C881:C899").ClearContents
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C881:C886").Value = 0
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C887:C892").Value = False
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C898").Value = " "
+    'LIMPAR PERFIL DE VENDA
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("A901:G950").ClearContents
+    'INFO CAPA
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B556:C575").Value = "0.00"
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("E556:F578").Value = "0.00"
+    'LIMPAR ASSOCIATIVO
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C481:C496").ClearContents
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value = False
+    'LIMPAR LANÇAMENTOS
+    ThisWorkbook.Sheets("Lançamentos").Range("A2:DH300").ClearContents
+    'LIMPAR CAPA
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AG38:AG39").Value = 0
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("E44:W52").Value = 0
+     
+    
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("b1").ClearContents
+    Application.Calculate
+End Sub
+
+Sub CARREGAR_VIABILIDADE()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    If ºCODIGO_EMP("") <> "" And ºCOD_VERSÃO("") <> "" Then
+        Dim D_SHT, F_SHT As Worksheet
+        
+        ºARQUIVO = ºDIRETORIO & "\" & ºPASTA & "\" & ºCODIGO_EMP("") & " " & ºNOME_EMP("") & ".vcwbd"
+        Call CLEARALL
+        Do Until IsFileOpen(CStr(ºARQUIVO)) = False
+            Application.Wait (Now + TimeValue("00:00:02"))
+        Loop
+        Workbooks.Open ºARQUIVO, , , , "wmscyrela2017!,!,"
+        
+        Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+        ºOK = False
+        For Each ºSht In Workbooks(Dir(ºARQUIVO)).Sheets
+            If ºSht.Name = ºCOD_VERSÃO("") Then
+                ºOK = True
+            End If
+        Next
+        If Not ºOK Then
+            ºCOD_VERSÃO (0)
+            ºNOME_VERSÃO (" ")
+            Workbooks(Dir(ºARQUIVO)).Close , False
+           GoTo fim
+        End If
+    
+        Set F_SHT = Workbooks(Dir(ºARQUIVO)).Sheets(ºCOD_VERSÃO(""))
+        ThisWorkbook.Sheets("BD_APOIO").Range("K16").Value = Workbooks(Dir(ºARQUIVO)).Sheets("CONTROLE").Range("B" & 3 + F_SHT.Index).Value
+        ThisWorkbook.Sheets("BD_APOIO").Range("K17").Value = Workbooks(Dir(ºARQUIVO)).Sheets("CONTROLE").Range("C" & 3 + F_SHT.Index).Value
+        ThisWorkbook.Sheets("BD_APOIO").Range("K18").Value = Workbooks(Dir(ºARQUIVO)).Sheets("CONTROLE").Range("D" & 3 + F_SHT.Index).Value
+        '----------------------------------------------------------------------------------------
+        '                                   Nome
+        '----------------------------------------------------------------------------------------
+        ºNOME_VERSÃO (F_SHT.Range("B1").Value)
+        ºDATA_BASE (Replace(F_SHT.Range("C1").Value, "'", ""))
+        ºDATA_FASE_1 (Replace(F_SHT.Range("E1").Value, "'", ""))
+        ºSTATUS_STUD (F_SHT.Range("F1").Value)
+        '----------------------------------------------------------------------------------------
+        '                                   Tipologias
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("A3:N33").Value = F_SHT.Range("A3:N33").Value
+        ºL = D_SHT.Range("B34").End(xlUp).Row
+        '----------------------------------------------------------------------------------------
+        '                                   Vagas Extras
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("A35:H55").Value = F_SHT.Range("A35:H55").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Curvas de Vendas
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("A57:N106").Value = F_SHT.Range("A57:N106").Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   Tabela de Vendas
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("A108:NA157").Value = F_SHT.Range("A108:NA157").Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   Perfil de Taxas
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("A159:T208").NumberFormat = "@"
+        D_SHT.Range("A159:T208").Value = F_SHT.Range("A159:T208").Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   Custo de Obra
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("A210:N259").Value = F_SHT.Range("A210:N259").Value
+        D_SHT.Range("S210:S259").Value = F_SHT.Range("S210:S259").Value
+        For ºL = 210 To F_SHT.Cells(259, 2).End(xlUp).Row
+            ' Valor Marjorado
+            ºC = Application.Match("Valor Marjorado", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).FormulaR1C1 = "=(((RC[-1]+RC[4])*R1C17)/(SUMPRODUCT(RC[-7]:RC[-5]*1)+1))-RC[4]"
+            ' Valor taxa gererncial
+            ºC = Application.Match("Valor taxa gererncial", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value = "=RC[-1]*RC[-8]"
+            ' Valor taxa gererncial
+            ºC = Application.Match("Valor taxa efetiva", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value = "=RC[-2]*RC[-8]"
+            ' Valor Dtas
+            ºC = Application.Match("Valor Dtas", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value = "=RC[-3]*RC[-8]"
+        Next
+        '----------------------------------------------------------------------------------------
+        '                                   Curva de Obra
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("B260:" & Cells(461, F_SHT.Cells(260, Columns.Count).End(xlToLeft).Column + 1).Address).Value = F_SHT.Range("B260:" & Cells(461, F_SHT.Cells(260, Columns.Count).End(xlToLeft).Column + 1).Address).Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   Terreno
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("C462:D479").Value = F_SHT.Range("C462:D479").Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   Associativo
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("B480:C496").Value = F_SHT.Range("B480:C496").Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   Metragens
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("A498:E521").Value = F_SHT.Range("A498:E521").Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   INFO CAPA
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("B556:F578").Value = F_SHT.Range("B556:F578").Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   Participação Permuta
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("C881:C899").Value = F_SHT.Range("C881:C899").Value
+        
+        '----------------------------------------------------------------------------------------
+        '                                   Perfil de Venda
+        '----------------------------------------------------------------------------------------
+        D_SHT.Range("A901:I950").Value = F_SHT.Range("A901:I950").Value
+                
+        '----------------------------------------------------------------------------------------
+        '                                   Lançamentos
+        '----------------------------------------------------------------------------------------
+        Set D_SHT = ThisWorkbook.Sheets("Lançamentos")
+        D_SHT.Calculate
+        ºLinhas = F_SHT.Range("A952:DH" & F_SHT.UsedRange.Rows.Count).Rows.Count
+        D_SHT.Range("A2:DH" & ºLinhas + 1).Value = F_SHT.Range("A952:DH" & F_SHT.UsedRange.Rows.Count).Value
+        Workbooks(Dir(ºARQUIVO)).Close , False
+        ºARQUIVO = Replace(ºDIRETORIO, "\BD", "") & "\CONFIGURAÇÕES\Tony Stark.vcwbd"
+        Workbooks.Open ºARQUIVO, False, True, , "wmscyrela2017!,!,"
+        Set F_SHT = Workbooks("Tony Stark.vcwbd").Sheets("BD_LANÇAMENTOS")
+        Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+        D_SHT.Range("B581:D880").ClearContents
+        Lº = F_SHT.Cells(Rows.Count, 1).End(xlUp).Row
+        F_SHT.Range("A2:C" & Lº).Copy
+        D_SHT.Range("B581").PasteSpecial (xlPasteValues)
+        Application.CutCopyMode = False
+        Workbooks("Tony Stark.vcwbd").Close , False
+        
+        ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value = ""
+        'Call CARREGAR_CAPA
+    End If
+fim:
+     
+    Application.DisplayAlerts = True
+End Sub
+
+Sub Selecionar_Empreendimento()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+        Dim fso As Object, NomePasta
+        Set fso = CreateObject("Scripting.FileSystemObject")
+    If fso.FolderExists(ºDIRETORIO) Then
+        SelecionarEmpreendimento.Show
+    Else
+        MsgBox ("Banco de dados inacessível, não é possível realizar a ação")
+    End If
+End Sub
+
+Sub Selecionar_Estudo()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+        Dim fso As Object, NomePasta
+        Set fso = CreateObject("Scripting.FileSystemObject")
+    If fso.FolderExists(ºDIRETORIO) Then
+        SelecionarEstudo.Show
+    Else
+        MsgBox ("Banco de dados inacessível, não é possível realizar a ação")
+    End If
+End Sub
+
+
+Sub SALVAR()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim D_SHT, F_SHT As Worksheet
+    
+    Dim fso As Object, NomePasta
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If fso.FolderExists(ºDIRETORIO) Then
+        
+        ºARQUIVO = ºDIRETORIO & "\" & ºPASTA & "\" & ºCODIGO_EMP("") & " " & ºNOME_EMP("") & ".vcwbd"
+    
+        Do Until IsFileOpen(CStr(ºARQUIVO)) = False
+            Application.Wait (Now + TimeValue("00:00:02"))
+        Loop
+        Workbooks.Open ºARQUIVO, , , , "wmscyrela2017!,!,"
+        Workbooks(Dir(ºARQUIVO)).Sheets("CONTROLE").Range("F" & ºCOD_VERSÃO("") + 5).NumberFormat = "@"
+        Workbooks(Dir(ºARQUIVO)).Sheets("CONTROLE").Range("F" & ºCOD_VERSÃO("") + 5).Value = Format(Now, "HH:MM DD/MM/YY")
+        Workbooks(Dir(ºARQUIVO)).Sheets("CONTROLE").Range("G" & ºCOD_VERSÃO("") + 5).Value = UCase(Environ("Username"))
+           
+            
+        Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+        Set F_SHT = Workbooks(Dir(ºARQUIVO)).Sheets(ºCOD_VERSÃO(""))
+        '----------------------------------------------------------------------------------------
+        '                                   Nome
+        '----------------------------------------------------------------------------------------
+         
+        F_SHT.Range("B1").Value = ºNOME_VERSÃO("")
+        F_SHT.Range("C1").Value = "'" & ºDATA_BASE("")
+        F_SHT.Range("E1").Value = "'" & ºDATA_FASE_1("")
+        F_SHT.Range("F1").Value = "'" & ºSTATUS_STUD("")
+           
+        '----------------------------------------------------------------------------------------
+        '                                   Tipologias
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("A3:N33").Value = D_SHT.Range("A3:N33").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Vagas Extras
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("A35:H55").Value = D_SHT.Range("A35:H55").Value
+        
+        '----------------------------------------------------------------------------------------
+        '                                   Curvas de Vendas
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("A57:N106").Value = D_SHT.Range("A57:N106").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Tabela de Vendas
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("A108:NA157").Value = D_SHT.Range("A108:NA157").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Perfil de Taxas
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("A159:T208").NumberFormat = "@"
+        F_SHT.Range("A159:T208").Value = D_SHT.Range("A159:T208").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Custo de Obra
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("A210:N259").Value = D_SHT.Range("A210:N259").Value
+        F_SHT.Range("S210:S259").Value = D_SHT.Range("S210:S259").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Curva de Obra
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("B260:" & Cells(461, D_SHT.Cells(260, Columns.Count).End(xlToLeft).Column + 1).Address).Value = _
+        D_SHT.Range("B260:" & Cells(461, D_SHT.Cells(260, Columns.Count).End(xlToLeft).Column + 1).Address).Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Terreno
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("C462:D479").Value = D_SHT.Range("C462:D479").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Associativo
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("B480:C496").Value = D_SHT.Range("B480:C496").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Metragens
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("A498:E521").Value = D_SHT.Range("A498:E521").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   INFO CAPA
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("B556:F578").Value = D_SHT.Range("B556:F578").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Participação Permuta
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("C881:C899").Value = D_SHT.Range("C881:C899").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Perfil de Venda
+        '----------------------------------------------------------------------------------------
+        F_SHT.Range("A901:I950").Value = D_SHT.Range("A901:I950").Value
+            
+        '----------------------------------------------------------------------------------------
+        '                                   Lançamentos
+        '----------------------------------------------------------------------------------------
+        Set D_SHT = ThisWorkbook.Sheets("Lançamentos")
+        D_SHT.Calculate
+            
+        ºLinhas = F_SHT.UsedRange.Rows.Count
+        F_SHT.Range("A952:DH" & 950 + ºLinhas).ClearContents
+        ºLinhas = F_SHT.Range("A952:DH" & 951 + D_SHT.UsedRange.Rows.Count).Rows.Count
+        F_SHT.Range("A952:DH" & 950 + ºLinhas).Value = D_SHT.Range("A2:DH" & D_SHT.UsedRange.Rows.Count).Value
+           
+        Workbooks(Dir(ºARQUIVO)).Close True
+            
+        MsgBox "Gravado com sucesso !!"
+    Else
+        MsgBox ("Banco de dados inacessível, as alterações não foram salvas!!")
+    End If
+     
+    Application.DisplayAlerts = True
+End Sub
+
+
+Sub CarregarBuffer()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim D_SHT, F_SHT As Worksheet
+    Dim ºLinhas As Double
+    Set F_SHT = ThisWorkbook.Sheets("BUFFER")
+    Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+    '----------------------------------------------------------------------------------------
+    '                                   Nome
+    '----------------------------------------------------------------------------------------
+         
+    F_SHT.Range("B1").Value = ºNOME_VERSÃO("")
+    F_SHT.Range("C1").Value = ºDATA_BASE("")
+    F_SHT.Range("E1").Value = ºDATA_FASE_1("")
+           
+    '----------------------------------------------------------------------------------------
+    '                                   Tipologias
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("A3:N33").Value = D_SHT.Range("A3:N33").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Vagas Extras
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("A35:H55").Value = D_SHT.Range("A35:H55").Value
+        
+    '----------------------------------------------------------------------------------------
+    '                                   Curvas de Vendas
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("A57:N106").Value = D_SHT.Range("A57:N106").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Tabela de Vendas
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("A108:NA157").Value = D_SHT.Range("A108:NA157").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Perfil de Taxas
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("A159:T208").NumberFormat = "@"
+    F_SHT.Range("A159:T208").Value = D_SHT.Range("A159:T208").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Custo de Obra
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("A210:N259").Value = D_SHT.Range("A210:N259").Value
+    F_SHT.Range("S210:S259").Value = D_SHT.Range("S210:S259").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Curva de Obra
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("B260:" & Cells(461, D_SHT.Cells(260, Columns.Count).End(xlToLeft).Column + 1).Address).Value = D_SHT.Range("B260:" & Cells(461, D_SHT.Cells(260, Columns.Count).End(xlToLeft).Column + 1).Address).Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Terreno
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("C462:C479").Value = D_SHT.Range("C462:C479").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Associativo
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("B480:C496").Value = D_SHT.Range("B480:C496").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Metragens
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("A498:E521").Value = D_SHT.Range("A498:E521").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   INFO CAPA
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("B556:F578").Value = D_SHT.Range("B556:F578").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Participação Permuta
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("C881:C899").Value = D_SHT.Range("C881:C899").Value
+    
+    '----------------------------------------------------------------------------------------
+    '                                   Perfil de Venda
+    '----------------------------------------------------------------------------------------
+    F_SHT.Range("A901:I950").Value = D_SHT.Range("A901:I950").Value
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Lançamentos
+    '----------------------------------------------------------------------------------------
+    Set D_SHT = ThisWorkbook.Sheets("Lançamentos")
+    D_SHT.Calculate
+            
+    ºLinhas = F_SHT.Range("A952:DH" & 951 + D_SHT.UsedRange.Rows.Count).Rows.Count
+    F_SHT.Range("A952:DH" & 950 + ºLinhas).Value = D_SHT.Range("A2:DH" & D_SHT.UsedRange.Rows.Count).Value
+           
+     
+    Application.DisplayAlerts = True
+End Sub
+
+Sub preencher_perfil()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    ºLinhas = ThisWorkbook.Sheets("Perfil de Venda").UsedRange.Rows.Count
+    If ºLinhas > 10 Then
+        ThisWorkbook.Sheets("Perfil de Venda").Range("10:" & ºLinhas).Delete
+    End If
+    ºL_INI = 5
+    
+    'PERFIS DO ESTUDO
+    For ºP = 901 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(950, 2).End(xlUp).Row
+        ºLinhas = ThisWorkbook.Sheets("Perfil de Venda").UsedRange.Rows.Count + 1
+        If ºP <> 901 Then
+            ThisWorkbook.Sheets("Perfil de Venda").Range("4:9").Copy
+            ThisWorkbook.Sheets("Perfil de Venda").Range(ºLinhas & ":" & ºLinhas + 3).PasteSpecial
+            ºL_INI = ºLinhas + 1
+        End If
+        ºperfil = ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºP).Value
+        If Application.IfError(Application.Match(ºP - 900, ThisWorkbook.Sheets("BD_CAD_VND").Range("N3:N33")), 0) <> 0 Or Application.IfError(Application.Match(ºP - 900, ThisWorkbook.Sheets("BD_CAD_VND").Range("H35:H55")), 0) <> 0 Then
+            ºTXJUR = ThisWorkbook.Sheets("BD_CAD_VND").Range("f" & ºP).Value
+            ThisWorkbook.Sheets("Perfil de Venda").Range("B" & ºL_INI).Value = "PERFIL DE VENDA: " & UCase(ºperfil) & " | TAXA DE JUROS: " & Format(ºTXJUR, "0.00%")
+            'TIPOLOGIAS
+            For ºT = 3 To 33
+                If ºP - 900 = ThisWorkbook.Sheets("BD_CAD_VND").Range("N" & ºT).Value And ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºT).Value Then
+                    ºL = ThisWorkbook.Sheets("Perfil de Venda").Cells(Rows.Count, 2).End(xlUp).Row + 1
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("B" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºT).Value
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("C" & ºL & ":" & "D" & ºL).Merge
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("C" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & ºT).Value
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("E" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("E" & ºT).Value - ThisWorkbook.Sheets("BD_CAD_VND").Range("F" & ºT).Value
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("F" & ºL).NumberFormat = "#,##0.00"
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Range("E" & ºT).Value - ThisWorkbook.Sheets("BD_CAD_VND").Range("F" & ºT).Value > 0 Then
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("F" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("O" & ºT).Value / ThisWorkbook.Sheets("Perfil de Venda").Range("E" & ºL).Value
+                    Else
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("F" & ºL).Value = 0
+                    End If
+                End If
+            Next
+            'VAGAS EXTRAS
+            For ºT = 35 To 55
+                If ºP - 900 = ThisWorkbook.Sheets("BD_CAD_VND").Range("H" & ºT).Value And ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºT).Value Then
+                    ºL = ThisWorkbook.Sheets("Perfil de Venda").Cells(Rows.Count, 2).End(xlUp).Row + 1
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("B" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºT).Value
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("C" & ºL & ":" & "D" & ºL).Merge
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("C" & ºL).Value = "VAGA EXTRA"
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("E" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & ºT).Value
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("F" & ºL).NumberFormat = "#,##0.00"
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("F" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("G" & ºT).Value / ThisWorkbook.Sheets("Perfil de Venda").Range("E" & ºL).Value
+                End If
+            Next
+            
+            'VELOCIDADE DE VENDA
+            ºV = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºP, 3).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B57:B105"), 0), 0)
+            For ºC = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºV + 56, Columns.Count).End(xlToLeft).Column Step 3
+                ºL = ThisWorkbook.Sheets("Perfil de Venda").Cells(Rows.Count, 8).End(xlUp).Row + 1
+                ThisWorkbook.Sheets("Perfil de Venda").Range("H" & ºL).NumberFormat = "0.0%"
+                ThisWorkbook.Sheets("Perfil de Venda").Range("H" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(56 + ºV, ºC)
+                
+                ThisWorkbook.Sheets("Perfil de Venda").Range("J" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(56 + ºV, ºC + 1)
+                ThisWorkbook.Sheets("Perfil de Venda").Range("I" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(56 + ºV, ºC + 2)
+            Next
+            
+            'TABELA DE VENDA
+            ºTabela = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & ºP).Value
+            ºTB = Left(ºTabela, Application.Search("|", ºTabela) - 2)
+            For ºC = 3 To 182 Step 9
+                ºL = ThisWorkbook.Sheets("Perfil de Venda").Cells(Rows.Count, 12).End(xlUp).Row + 1
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC).Value <> "" Then
+                    'Numero de Parcelas
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("L" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 1).Value
+                    'Periodicidade
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("M" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550"), 0) + 522).Value
+                    'Inicio
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("N" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 2).Value
+                    '% do VGV de Venda
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("O" & ºL).NumberFormat = "0.0%"
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("O" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 3).Value
+                    'Juros
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 4).Value = 1 Then
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("P" & ºL).Value = "Sim"
+                    Else
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("P" & ºL).Value = "Não"
+                    End If
+                    'Inicio dos Juros
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("Q" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 5).Value
+                    'fixar inicio
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 6).Value = 1 Then
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("R" & ºL).Value = "Sim"
+                    Else
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("R" & ºL).Value = "Não"
+                    End If
+                    'fixar fim
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 7).Value = 1 Then
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("S" & ºL).Value = "Sim"
+                    Else
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("S" & ºL).Value = "Não"
+                    End If
+                    'ultimo mes
+                    ThisWorkbook.Sheets("Perfil de Venda").Range("T" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 8).Value
+                End If
+            Next
+            'TABELA DE VENDA POS
+            ºTabela = ThisWorkbook.Sheets("BD_CAD_VND").Range("E" & ºP).Value
+            ThisWorkbook.Sheets("Perfil de Venda").Range("V" & ºL_INI + 2).Value = Replace("Tabela de Venda Pós-Entrega (iniciando no mês xx)", "xx", ThisWorkbook.Sheets("BD_CAD_VND").Range("H" & ºP).Value)
+            If ºTabela <> "" Then
+                ºTB = Left(ºTabela, Application.Search("|", ºTabela) - 2)
+                For ºC = 3 To 182 Step 9
+                    ºL = ThisWorkbook.Sheets("Perfil de Venda").Cells(Rows.Count, 22).End(xlUp).Row + 1
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC).Value <> "" Then
+                        'Numero de Parcelas
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("V" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 1).Value
+                        'Periodicidade
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("W" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550"), 0) + 522).Value
+                        'Inicio
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("X" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 2).Value
+                        '% do VGV de Venda
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("Y" & ºL).NumberFormat = "0.0%"
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("Y" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 3).Value
+                        'Juros
+                        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 4).Value = 1 Then
+                            ThisWorkbook.Sheets("Perfil de Venda").Range("Z" & ºL).Value = "Sim"
+                        Else
+                            ThisWorkbook.Sheets("Perfil de Venda").Range("Z" & ºL).Value = "Não"
+                        End If
+                        'Inicio dos Juros
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("AA" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 5).Value
+                        'fixar inicio
+                        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 6).Value = 1 Then
+                            ThisWorkbook.Sheets("Perfil de Venda").Range("AB" & ºL).Value = "Sim"
+                        Else
+                            ThisWorkbook.Sheets("Perfil de Venda").Range("AB" & ºL).Value = "Não"
+                        End If
+                        'fixar fim
+                        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 7).Value = 1 Then
+                            ThisWorkbook.Sheets("Perfil de Venda").Range("AC" & ºL).Value = "Sim"
+                        Else
+                            ThisWorkbook.Sheets("Perfil de Venda").Range("AC" & ºL).Value = "Não"
+                        End If
+                        'ultimo mes
+                        ThisWorkbook.Sheets("Perfil de Venda").Range("AD" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTB, ºC + 8).Value
+                    End If
+                Next
+            End If
+        End If
+        ºLinhas = ThisWorkbook.Sheets("Perfil de Venda").UsedRange.Rows.Count
+        For ºL = ºL_INI + 5 To ºLinhas
+            ThisWorkbook.Sheets("Perfil de Venda").Range("C" & ºL & ":" & "D" & ºL).Merge
+        Next
+        InserirBordaPerfVND (ThisWorkbook.Sheets("Perfil de Venda").Range("B" & ºL_INI + 5 & ":" & "F" & ºLinhas))
+        InserirBordaPerfVND (ThisWorkbook.Sheets("Perfil de Venda").Range("H" & ºL_INI + 5 & ":" & "J" & ºLinhas))
+        InserirBordaPerfVND (ThisWorkbook.Sheets("Perfil de Venda").Range("L" & ºL_INI + 5 & ":" & "T" & ºLinhas))
+        InserirBordaPerfVND (ThisWorkbook.Sheets("Perfil de Venda").Range("V" & ºL_INI + 5 & ":" & "AD" & ºLinhas))
+    Next
+End Sub
+
+Sub Preencher_Premissas()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    ºLinhas = ThisWorkbook.Sheets("Premissas").UsedRange.Rows.Count
+    ºU_Linha_O = Application.Match("CURVAS DE OBRA", ThisWorkbook.Sheets("Premissas").Range("B1:B" & ºLinhas), 0)
+    ThisWorkbook.Sheets("Premissas").Rows(ºU_Linha_O - 1).RowHeight = 3.75
+    ºU_Linha = Application.Match("CURVAS DE OBRA", ThisWorkbook.Sheets("Premissas").Range("B31:B" & ºLinhas), 0) + 25
+    If ºU_Linha > 32 Then
+        ThisWorkbook.Sheets("Premissas").Range("32:" & ºU_Linha).Delete
+    End If
+    ThisWorkbook.Sheets("Premissas").Range("32:33").ClearContents
+    
+    ºLinhas_lct = ThisWorkbook.Worksheets("Lançamentos").Cells(Rows.Count, 2).End(xlUp).Row
+    If ThisWorkbook.Worksheets("Lançamentos").AutoFilterMode = True Then ThisWorkbook.Worksheets("Lançamentos").AutoFilterMode = False
+    ThisWorkbook.Worksheets("Lançamentos").Cells.AutoFilter
+    ThisWorkbook.Worksheets("Lançamentos").AutoFilter.Sort.SortFields.Clear
+    ThisWorkbook.Worksheets("Lançamentos").AutoFilter.Sort.SortFields.Add Key:=Range("G1:G" & ºLinhas_lct), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+    ThisWorkbook.Worksheets("Lançamentos").AutoFilter.Sort.Apply
+    ThisWorkbook.Worksheets("Lançamentos").AutoFilter.Sort.SortFields.Clear
+    ThisWorkbook.Worksheets("Lançamentos").AutoFilter.Sort.SortFields.Add Key:=Range("C1:C" & ºLinhas_lct), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+    ThisWorkbook.Worksheets("Lançamentos").AutoFilter.Sort.Apply
+    
+    ºLçtos = ThisWorkbook.Sheets("Lançamentos").Cells(Rows.Count, 1).End(xlUp).Row - 4
+    If ºLçtos > 1 Then
+        For ºL = 1 To ºLçtos
+            ThisWorkbook.Sheets("Premissas").Range("32:32").Copy
+            ThisWorkbook.Sheets("Premissas").Range("32:32").Insert Shift:=xlDown
+        Next
+    End If
+    ºLinhas = ThisWorkbook.Sheets("Premissas").UsedRange.Rows.Count
+    ºU_Linha = Application.Match("CURVAS DE OBRA", ThisWorkbook.Sheets("Premissas").Range("B31:B" & ºLinhas), 0) + 27
+    ThisWorkbook.Sheets("Premissas").Range("31:31").Copy
+    ThisWorkbook.Sheets("Premissas").Range("32:" & ºU_Linha).PasteSpecial (xlPasteFormulas)
+    ThisWorkbook.Sheets("Premissas").Calculate
+    
+    
+    'CURVAS DE OBRA E TIPOLOGIAS
+    ºCurvas = ThisWorkbook.Sheets("BD_CAD_VND").Cells(259, 2).End(xlUp).Row - 209
+    ºTipologias = ThisWorkbook.Sheets("BD_CAD_VND").Cells(33, 3).End(xlUp).Row - 2 + ThisWorkbook.Sheets("BD_CAD_VND").Cells(55, 3).End(xlUp).Row - 34
+    If ºTipologias > ºCurvas Then ºLOPP = ºTipologias - 3 Else ºLOPP = ºCurvas - 3
+    ºLinhas = ThisWorkbook.Sheets("Premissas").UsedRange.Rows.Count
+    ºU_Linha_O = Application.Match("CURVAS DE OBRA", ThisWorkbook.Sheets("Premissas").Range("B1:B" & ºLinhas), 0) + 4
+    ºU_Linha = Application.Match("CUSTO TOTAL", ThisWorkbook.Sheets("Premissas").Range("B1:B" & ºLinhas), 0)
+    If ºU_Linha - ºU_Linha_O > 2 Then
+        ThisWorkbook.Sheets("Premissas").Range(ºU_Linha_O + 1 & ":" & ºU_Linha - 2).Delete
+    End If
+    If ºLOPP > 3 Then
+        For ºL = 1 To ºLOPP
+            ThisWorkbook.Sheets("Premissas").Range(ºU_Linha_O & ":" & ºU_Linha_O).Copy
+            ThisWorkbook.Sheets("Premissas").Range(ºU_Linha_O & ":" & ºU_Linha_O).Insert Shift:=xlDown
+        Next
+    End If
+    ºLinhas = ThisWorkbook.Sheets("Premissas").UsedRange.Rows.Count
+    ºU_Linha = Application.Match("CUSTO TOTAL", ThisWorkbook.Sheets("Premissas").Range("B1:B" & ºLinhas), 0) - 1
+    ºU_Linha_O = Application.Match("CURVAS DE OBRA", ThisWorkbook.Sheets("Premissas").Range("B1:B" & ºLinhas), 0)
+    ThisWorkbook.Sheets("Premissas").Range(ºU_Linha_O + 3 & ":" & ºU_Linha_O + 3).Copy
+    ThisWorkbook.Sheets("Premissas").Range(ºU_Linha_O + 4 & ":" & ºU_Linha).PasteSpecial (xlPasteFormulas)
+    ThisWorkbook.Sheets("Premissas").Calculate
+    For ºL = ºU_Linha_O To ºU_Linha + 1
+        If ThisWorkbook.Sheets("Premissas").Rows(ºL).PageBreak = -4105 Then
+            ºALTURA = ThisWorkbook.Sheets("Premissas").Range(ºU_Linha_O & ":" & ºL - 1).Height
+            ThisWorkbook.Sheets("Premissas").Rows(ºU_Linha_O - 1).RowHeight = ThisWorkbook.Sheets("Premissas").Rows(ºU_Linha_O - 1).RowHeight + ºALTURA
+        End If
+    Next
+    
+    
+    'OBSERVAÇÕES DIVERSAS
+    ºLinhas = ThisWorkbook.Sheets("Premissas").UsedRange.Rows.Count
+    ºU_Linha = Application.Match("OBSERVAÇÕES DIVERSAS", ThisWorkbook.Sheets("Premissas").Range("B1:B" & ºLinhas), 0) + 3
+    ºU_Linha_O = ThisWorkbook.Sheets("Premissas").Cells(Rows.Count, 2).End(xlUp).Row - 2
+    If ºU_Linha_O >= ºU_Linha Then ThisWorkbook.Sheets("Premissas").Range(ºU_Linha & ":" & ºU_Linha_O).Delete
+    ºU_Linha_O = Len(ThisWorkbook.Sheets("BD_CAD_VND").Range("C898").Value) - Len(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Range("C898").Value, Chr(10), vbNullString)) - 2
+    If ºU_Linha_O > 0 Then
+        For ºL = 1 To ºU_Linha_O
+            ThisWorkbook.Sheets("Premissas").Rows(ºU_Linha).Insert Shift:=xlDown
+        Next
+    End If
+    ThisWorkbook.Sheets("Premissas").Calculate
+End Sub
+Sub Criar_Curvas()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Dim ºfases(19) As Variant
+    Call AttBDTipologias
+    Call DescarregarInfosTerreno
+    Call Checar_Desembolso_Verbas
+    If Criar_Tabela = "erro" Or CurvaRec = "erro" Then
+        MsgBox "INFORMAÇÕES INSUFICIENTES PARA A GERAÇÃO DO RELATORIO!!"
+        Exit Sub
+    Else
+        Call Cont_Area_PVT(1)
+        Call gerar_fluxo
+    End If
+    
+    '--------------------------------------------------------------------------------
+    '                   Limpar Infos
+    '--------------------------------------------------------------------------------
+    ºC = ThisWorkbook.Sheets("Relatório de Curvas").Cells(2, Columns.Count).End(xlToLeft).Column
+    If ºC > 3 Then
+       ThisWorkbook.Sheets("Relatório de Curvas").Range(Columns(4).Address & ":" & Columns(ºC).Address).Delete
+    End If
+    ºR = ThisWorkbook.Sheets("Relatório de Curvas").Cells(Rows.Count, 2).End(xlUp).Row
+    If ºR > 3 Then
+       ThisWorkbook.Sheets("Relatório de Curvas").Range(Rows(4).Address & ":" & Rows(ºR).Address).Delete
+    End If
+    
+    
+    ºRows = ThisWorkbook.Sheets("Fluxo Operacional").Cells(Rows.Count, 2).End(xlUp).Row
+    ThisWorkbook.Sheets("Fluxo Operacional").Range("B6:B" & ºRows).Copy
+    ThisWorkbook.Sheets("Relatório de Curvas").Range("C3").PasteSpecial xlPasteValues, , , True
+    ThisWorkbook.Sheets("Fluxo Operacional").Range("C6:C" & ºRows).Copy
+    ThisWorkbook.Sheets("Relatório de Curvas").Range("C2").PasteSpecial xlPasteValues, , , True
+    ThisWorkbook.Sheets("Relatório de Curvas").Range("C:C").Copy
+    ThisWorkbook.Sheets("Relatório de Curvas").Range(Columns(3).Address & ":" & Columns(ºRows - 3).Address).PasteSpecial (xlPasteFormats)
+    
+    ThisWorkbook.Sheets("Relatório de Curvas").Cells(1, 3).FormulaR1C1 = "=Year(" & ThisWorkbook.Sheets("Relatório de Curvas").Cells(2, 3).Address(, , xlR1C1) & ")"
+    If ThisWorkbook.Sheets("Relatório de Curvas").Cells(3, 3).Text <> "12" Then
+        ºCol1 = 3
+    Else
+        ºCol1 = 4
+    End If
+    For ºC = 4 To ThisWorkbook.Sheets("Relatório de Curvas").Cells(3, Columns.Count).End(xlToLeft).Column
+        If ThisWorkbook.Sheets("Relatório de Curvas").Cells(2, ºC).Text = "12" Then
+            ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(1, ºCol1).Address & ":" & Cells(1, ºC).Address).HorizontalAlignment = xlCenterAcrossSelection
+        ElseIf ThisWorkbook.Sheets("Relatório de Curvas").Cells(2, ºC).Text = "01" Then
+            ºCol1 = ºC
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(1, ºC).FormulaR1C1 = "=Year(" & ThisWorkbook.Sheets("Relatório de Curvas").Cells(2, ºC).Address(, , xlR1C1) & ")"
+        End If
+    Next
+    '--------------------------------------------------------------------------------
+    '                   Curvas de Venda
+    '--------------------------------------------------------------------------------
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(106, 2).End(xlUp).Row > 56 Then
+        For ºCURVA = 57 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(106, 2).End(xlUp).Row
+            ºCOLBD = ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, Columns.Count).End(xlToLeft).Column - 2) / 3) - 1
+            ReDim ºVelocidades(ºCOLBD, 2)
+            For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, Columns.Count).End(xlToLeft).Column Step 3
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, ºCOLBD).Value <> "" Then
+                    'inicio
+                    ºVelocidades((ºCOLBD - 3) / 3, 0) = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, ºCOLBD + 2).Value, 0)
+                    '%de Venda
+                    ºVelocidades((ºCOLBD - 3) / 3, 1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, ºCOLBD).Value
+                    'Duração
+                    ºVelocidades((ºCOLBD - 3) / 3, 2) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, ºCOLBD + 1).Value
+                End If
+            Next
+            ºVelocidades = BubbleSort(ºVelocidades, 0, 2)
+            'LINHA RELATÓRIO
+            ºL = ThisWorkbook.Sheets("Relatório de Curvas").Cells(Rows.Count, 2).End(xlUp).Row + 1
+            'DESCRIÇÃO DA CURVA
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL, 2).Value = "PERFIL DE VENDA " & ºCURVA - 56
+            
+            For ºCOLBD = 0 To ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, Columns.Count).End(xlToLeft).Column - 2) / 3) - 1
+                'DATA INICIO CURVA
+                ºDataInicio = ºVelocidades(ºCOLBD, 0)
+                'COLUNA LINHA DO TEMPO
+                ºC_INI = Application.Match(CInt(ºDataInicio), ThisWorkbook.Sheets("Relatório de Curvas").Range("A3:" & Cells(3, ºRows - 3).Address), 0)
+                ºC_FIM = ºC_INI + ºVelocidades(ºCOLBD, 2) - 1
+                ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).Interior.Color = 13995347
+            Next
+            '--------------------------------------------------------------------------------
+            '                   Tabelas de Venda
+            '--------------------------------------------------------------------------------
+            ºTabela = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & (ºCURVA - 56) + 900).Value
+            ºTabela = CInt(Left(ºTabela, Application.Search("|", ºTabela) - 2)) + 107
+            'LINHA RELATÓRIO
+            ºL = ThisWorkbook.Sheets("Relatório de Curvas").Cells(Rows.Count, 2).End(xlUp).Row + 1
+            'DESCRIÇÃO DA CURVA
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL, 2).Value = "TABELA DE VENDA " & ºCURVA - 56
+            For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTabela, Columns.Count).End(xlToLeft).Column Step 9
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTabela, ºCOLBD).Value <> "" Then
+                    'Tipo de parcela
+                    ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTabela, ºCOLBD).Value
+                    'Periodicidade da Parcela
+                    ºPeriod = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & Application.Match(ºTipo, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550"), 0) + 522).Value
+                    ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & Application.Match(ºTipo, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550"), 0) + 522).Value
+                    'Inicio da Parcela
+                    ºFXini = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTabela, ºCOLBD + 6).Value
+                    ºF = 0
+                    Erase ºfases
+                    For ºTIPOLOGIA = 3 To 33
+                        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºTIPOLOGIA).Value And ThisWorkbook.Sheets("BD_CAD_VND").Range("N" & ºTIPOLOGIA).Value = (ºCURVA - 56) Then
+                            If Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºTIPOLOGIA).Value, ºfases, 0), 0) = 0 Then
+                                ºfases(ºF) = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºTIPOLOGIA).Value
+                                If ºFXini = 0 Then
+                                    ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTabela, ºCOLBD + 2).Value, CInt(ºfases(ºF))) + ºVelocidades(0, 0)
+                                Else
+                                    ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTabela, ºCOLBD + 2).Value, CInt(ºfases(ºF)))
+                                End If
+                                'COLUNA LINHA DO TEMPO
+                                ºC_INI = Application.Match(CInt(ºIni), ThisWorkbook.Sheets("Relatório de Curvas").Range("A3:" & Cells(3, ºRows - 3).Address), 0)
+                                ºC_FIM = ºC_INI
+                                ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).Interior.Color = 15773696
+                                ºHasCooment = False
+                                For Each cmt In ThisWorkbook.Sheets("Relatório de Curvas").Comments
+                                     If cmt.Parent.Address = ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).Address Then
+                                        ºHasCooment = True
+                                     End If
+                                Next cmt
+                                If ºHasCooment Then
+                                    ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).Comment.Text _
+                                    Text:=ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).Comment.Text & Chr(10) & "Fase " & ºfases(ºF) & " - " & ºTipo
+                                Else
+                                    ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).AddComment
+                                    ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).Comment.Visible = False
+                                    ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).Comment.Text Text:="Fase " & ºfases(ºF) & " - " & ºTipo
+                                End If
+                                ºF = ºF + 1
+                            End If
+                        End If
+                    Next
+                End If
+            Next
+        Next
+    End If
+    '--------------------------------------------------------------------------------
+    '                   Curvas de Obra
+    '--------------------------------------------------------------------------------
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(259, 2).End(xlUp).Row > 209 Then
+        For ºFASE = 210 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(259, 2).End(xlUp).Row
+            'LINHA RELATÓRIO
+            ºL = ThisWorkbook.Sheets("Relatório de Curvas").Cells(Rows.Count, 2).End(xlUp).Row + 1
+            'DESCRIÇÃO DA CURVA
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL, 2).Value = "OBRA FASE " & ºFASE - 209
+            'DATA INICIO CURVA
+            ºC = Application.Match("inicio", ThisWorkbook.Sheets("BD_CAD_VND").Range("A209:S209"), 0)
+            ºDataInicio = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Value, ºFASE - 209)
+            'COLUNA LINHA DO TEMPO
+            ºC_INI = Application.Match(CInt(ºDataInicio), ThisWorkbook.Sheets("Relatório de Curvas").Range("A3:" & Cells(3, ºRows - 3).Address), 0)
+            ºC = Application.Match("duração", ThisWorkbook.Sheets("BD_CAD_VND").Range("A209:S209"), 0)
+            ºC_FIM = ºC_INI + ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Value - 1
+            ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL, ºC_INI).Address & ":" & Cells(ºL, ºC_FIM).Address).Interior.Color = 5296274
+        Next
+    End If
+    'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "3 OBRA", 49407
+
+    '--------------------------------------------------------------------------------
+    '                   Terreno
+    '--------------------------------------------------------------------------------
+    'IMPOSTO SOBRE PERMUTA FISICA
+    ºR = Application.Match("ºT_Aliquota", ThisWorkbook.Sheets("BD_CAD_VND").Range("b:b"), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value <> "" Then
+        If CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value, "%", "")) > 0 Then
+            ºR = Application.Match("ºT_Pagamento", ThisWorkbook.Sheets("BD_CAD_VND").Range("b:b"), 0)
+            ºDataInicio = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value
+            ºC_INI = Application.Match(CInt(ºDataInicio), ThisWorkbook.Sheets("Relatório de Curvas").Range("A3:" & Cells(3, ºRows - 3).Address), 0)
+            'LINHA RELATÓRIO
+            ºL = ThisWorkbook.Sheets("Relatório de Curvas").Cells(Rows.Count, 2).End(xlUp).Row + 1
+            'DESCRIÇÃO DA CURVA
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL, 2).Value = "Imposto Sobre Permuta"
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL, ºC_INI).Interior.Color = 49407
+        End If
+    End If
+    'ITBI
+    ºR = Application.Match("ºT_Aliquota_ITBI", ThisWorkbook.Sheets("BD_CAD_VND").Range("b:b"), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value <> "" Then
+        If CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value, "%", "")) > 0 Then
+            ºR = Application.Match("ºT_Pagamento_ITBI", ThisWorkbook.Sheets("BD_CAD_VND").Range("b:b"), 0)
+            ºDataInicio = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value
+            ºC_INI = Application.Match(CInt(ºDataInicio), ThisWorkbook.Sheets("Relatório de Curvas").Range("A3:" & Cells(3, ºRows - 3).Address), 0)
+            'LINHA RELATÓRIO
+            ºL = ThisWorkbook.Sheets("Relatório de Curvas").Cells(Rows.Count, 2).End(xlUp).Row + 1
+            'DESCRIÇÃO DA CURVA
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL, 2).Value = "ITBI"
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL, ºC_INI).Interior.Color = 49407
+        End If
+    End If
+    'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "1 TERRENO", 49407
+    
+    '--------------------------------------------------------------------------------
+    '                   2 PROPAGANDA
+    '--------------------------------------------------------------------------------
+    'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "2 PROPAGANDA", 9420794
+    
+    '--------------------------------------------------------------------------------
+    '                   3.4 INCORPORAÇÃO
+    '--------------------------------------------------------------------------------
+    'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "3.4 INCORPORAÇÃO", 6773025
+    
+    '--------------------------------------------------------------------------------
+    '                   4 RELACIONAMENTO
+    '--------------------------------------------------------------------------------
+    'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "4 RELACIONAMENTO", 8421504
+    
+    '--------------------------------------------------------------------------------
+    '                   5 DTAS
+    '--------------------------------------------------------------------------------
+   'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "5 DTAS", 15261367
+    
+    '--------------------------------------------------------------------------------
+    '                   6 COMERCIAL
+    '--------------------------------------------------------------------------------
+    'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "6 COMERCIAL", 10213316
+    
+    '--------------------------------------------------------------------------------
+    '                   8 ADM. DE CARTEIRA
+    '--------------------------------------------------------------------------------
+    'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "8 ADM. DE CARTEIRA", 14336204
+    
+    '--------------------------------------------------------------------------------
+    '                   8.3 DESP. C/ FINANC. (CA)
+    '--------------------------------------------------------------------------------
+    'BUSCAR EM LANÇAMENTOS
+    ºCurvas_Lançamentos_Manuais "8.3 DESP. C/ FINANC. (CA)", 15986394
+    ºARQUIVO = Replace(ºDIRETORIO, "\BD", "") & "\CONFIGURAÇÕES\Modelo Relatorios.xlsx"
+    
+    Dim fso As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If fso.FolderExists(ºDIRETORIO) Then
+        Set ºEXPT = Workbooks.Open(ºARQUIVO, False, True)
+        ThisWorkbook.Sheets("Relatório de Curvas").Cells.Copy
+        ºEXPT.Sheets("Relatório de Curvas").Cells.PasteSpecial (xlPasteAll)
+        ºEXPT.Sheets("Relatório de Curvas").UsedRange.Value = ºEXPT.Sheets("Relatório de Curvas").UsedRange.Value
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+            ºEXPT.Sheets("Relatório de Curvas").Outline.ShowLevels RowLevels:=2
+        Else
+            ºEXPT.Sheets("Relatório de Curvas").Outline.ShowLevels RowLevels:=1
+        End If
+        ºEXPT.Sheets("Relatório de Curvas").Copy
+        Application.FileDialog(msoFileDialogSaveAs).FilterIndex = 1
+        Application.FileDialog(msoFileDialogSaveAs).InitialFileName = newString("Curvas " & ºCODIGO_EMP("") & "-" & ºCOD_VERSÃO("") & " " & Replace(Replace(ºNOME_EMP("") & " " & ºNOME_VERSÃO(""), "\", ""), "/", "") & ".xlsx")
+        Application.FileDialog(msoFileDialogSaveAs).Show
+        If Application.FileDialog(msoFileDialogSaveAs).SelectedItems.Count > 0 Then
+            ºCaminho = newString(Application.FileDialog(msoFileDialogSaveAs).SelectedItems(1))
+        Else
+            ºCaminho = "book de viabilidade"
+        End If
+        Do Until Dir(ºCaminho) = ""
+            MsgBox "Arquivo ja existe!!"
+            Application.FileDialog(msoFileDialogSaveAs).Show
+            If Application.FileDialog(msoFileDialogSaveAs).SelectedItems.Count > 0 Then
+                ºCaminho = newString(Application.FileDialog(msoFileDialogSaveAs).SelectedItems(1))
+            Else
+                ºCaminho = "book de viabilidade"
+            End If
+        Loop
+        ActiveWorkbook.SaveAs ºCaminho
+        ActiveWorkbook.Close
+        MsgBox ("Exportado com sucesso para: " & ºCaminho)
+        If MsgBox("deseja abrir o arquivo?", vbYesNo) = vbYes Then
+            Dim ºExcel As Object
+            Set ºExcel = GetObject(ThisWorkbook.Sheets("BD_APOIO").Range("K14").Value)
+            ºExcel.Parent.Workbooks.Open ºCaminho
+        End If
+        Application.CutCopyMode = False
+        ºEXPT.Close False
+    Else
+        MsgBox ("Não é possivel exportar o relatório no modo offline")
+    End If
+    
+    
+End Sub
+Function ºCurvas_Lançamentos_Manuais(ºPEP As String, ºCOD_COR As Variant)
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Function
+    
+    ºRows = ThisWorkbook.Sheets("Fluxo Operacional").Cells(Rows.Count, 2).End(xlUp).Row
+    'LANÇAMENTOS
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    ºLCTO = ThisWorkbook.Sheets("LANÇAMENTOS").Cells(Rows.Count, 2).End(xlUp).Row
+    For ºL = 2 To ºLCTO
+        ºAREA = ThisWorkbook.Sheets("LANÇAMENTOS").Range("C" & ºL).Value
+        If ºAREA = ºPEP Then
+            'LINHA RELATÓRIO
+            ºL_RELATORIO = ThisWorkbook.Sheets("Relatório de Curvas").Cells(Rows.Count, 2).End(xlUp).Row + 1
+            If ThisWorkbook.Sheets("LANÇAMENTOS").Range("DH" & ºL).Value <> "" Then
+                ºAssunto = ThisWorkbook.Sheets("LANÇAMENTOS").Range("DH" & ºL).Value & " F" & ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+            Else
+                ºAssunto = ThisWorkbook.Sheets("LANÇAMENTOS").Range("B" & ºL).Value & " F" & ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+            End If
+            ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL_RELATORIO, 2).Value = ºAssunto
+            ºINICIO = ThisWorkbook.Sheets("LANÇAMENTOS").Range("G" & ºL).Value
+            ºEVENTO_V = ThisWorkbook.Sheets("LANÇAMENTOS").Range("H" & ºL).Value
+            If ºEVENTO_V <> "" Then
+                ºINICIO = DIF_DT_LCTO(ºEVENTO_V, 0)
+            End If
+            ºC_INI = Application.Match(CInt(ºINICIO), ThisWorkbook.Sheets("Relatório de Curvas").Range("A3:" & Cells(3, ºRows - 3).Address), 0)
+            'COM OU SEM CURVA DE LANÇAMENTO NÃO LINEAR
+            If ThisWorkbook.Sheets("LANÇAMENTOS").Range("J" & ºL).Value Then
+                ºcolunas = ThisWorkbook.Sheets("LANÇAMENTOS").Cells(ºL, 112).End(xlToLeft).Column - 10
+                ºC_FIM = ºC_INI + ºcolunas - 1
+                ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL_RELATORIO, ºC_INI).Address & ":" & Cells(ºL_RELATORIO, ºC_FIM).Address).Interior.Color = ºCOD_COR
+            Else
+                ºPARCELAS = ThisWorkbook.Sheets("LANÇAMENTOS").Range("E" & ºL).Value
+                ºTipo = ThisWorkbook.Sheets("LANÇAMENTOS").Range("F" & ºL).Value
+                If ºTipo <> "Curva de Obra" Then
+                    ºLi = Application.Match(ºTipo, ThisWorkbook.Sheets("BD_CAD_VND").Range("C523:C550"), 0) + 522
+                    ºPeriodicidade = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & ºLi).Value
+                    ºC_FIM = ºC_INI + (ºPeriodicidade * (ºPARCELAS - 1))
+                    ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL_RELATORIO, ºC_INI).Address & ":" & Cells(ºL_RELATORIO, ºC_FIM).Address).Interior.Color = ºCOD_COR
+                Else
+                    ºCURVA = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value, 3).Value)
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(106, 2).End(xlUp).Row > 56 Then
+                        ºCURVA = ºCURVA + 56
+                        ºCOLBD = ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, Columns.Count).End(xlToLeft).Column - 2) / 3) - 1
+                        ReDim ºVelocidades(ºCOLBD, 2)
+                        For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, Columns.Count).End(xlToLeft).Column Step 3
+                            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+                                'inicio
+                                ºVelocidades((ºCOLBD - 3) / 3, 0) = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, ºCOLBD + 2).Value, 0)
+                                '%de Venda
+                                ºVelocidades((ºCOLBD - 3) / 3, 1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, ºCOLBD).Value
+                                'Duração
+                                ºVelocidades((ºCOLBD - 3) / 3, 2) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, ºCOLBD + 1).Value
+                            End If
+                        Next
+                        ºVelocidades = BubbleSort(ºVelocidades, 0, 2)
+                        'LINHA RELATÓRIO
+                        ºL = ThisWorkbook.Sheets("Relatório de Curvas").Cells(Rows.Count, 2).End(xlUp).Row + 1
+                        'DESCRIÇÃO DA CURVA
+                        ThisWorkbook.Sheets("Relatório de Curvas").Cells(ºL_RELATORIO, 2).Value = "Perfil de Venda " & ºCURVA - 56
+                        
+                        For ºCOLBD = 0 To ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºCURVA, Columns.Count).End(xlToLeft).Column - 2) / 3) - 1
+                            'DATA INICIO CURVA
+                            ºDataInicio = ºVelocidades(ºCOLBD, 0)
+                            'COLUNA LINHA DO TEMPO
+                            ºC_INI = Application.Match(CInt(ºDataInicio), ThisWorkbook.Sheets("Relatório de Curvas").Range("A3:" & Cells(3, ºRows - 3).Address), 0)
+                            ºC_FIM = ºC_INI + ºVelocidades(ºCOLBD, 2) - 1
+                            ThisWorkbook.Sheets("Relatório de Curvas").Range(Cells(ºL_RELATORIO, ºC_INI).Address & ":" & Cells(ºL_RELATORIO, ºC_FIM).Address).Interior.Color = ºCOD_COR
+                        Next
+                    End If
+                End If
+            End If
+        End If
+   Next
+   
+End Function
+
+Sub GerarReceitas()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+     
+     Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    Call AttBDTipologias
+    Call DescarregarInfosTerreno
+    Call Checar_Desembolso_Verbas
+    If Criar_Tabela = "erro" Or CurvaRec = "erro" Then
+        MsgBox "INFORMAÇÕES INSUFICIENTES PARA A GERAÇÃO DO RELATORIO!!"
+        Exit Sub
+    ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+        Call Cont_Area_PVT(1)
+        Call gerar_fluxo
+    End If
+    Application.Calculate
+    DoEvents
+    ºLinhas = ThisWorkbook.Sheets("Relatório de Receita").Cells(Rows.Count, 2).End(xlUp).Row
+    If ºLinhas > 7 Then ThisWorkbook.Sheets("Relatório de Receita").Range("7:" & ºLinhas - 1).EntireRow.Delete
+    ºC = ThisWorkbook.Sheets("Relatório de Receita").Cells(3, Columns.Count).End(xlToLeft).Column
+    If ºC > 9 Then ThisWorkbook.Sheets("Relatório de Receita").Range(Columns(10).Address & ":" & Columns(ºC).Address).EntireColumn.Delete
+    For ºL = 4 To ThisWorkbook.Sheets("FLUXO OPERACIONAL").Cells(Rows.Count, 2).End(xlUp).Row
+        If ºL > 8 Then
+           ThisWorkbook.Sheets("Relatório de Receita").Range("6:6").Copy
+           ThisWorkbook.Sheets("Relatório de Receita").Range(ºL - 2 & ":" & ºL - 2).Insert
+        End If
+    Next
+    ºL = ThisWorkbook.Sheets("Relatório de Receita").Cells(Rows.Count, 2).End(xlUp).Row
+    ThisWorkbook.Sheets("Relatório de Receita").Range("B5:C" & ºL).Value = ThisWorkbook.Sheets("FLUXO OPERACIONAL").Range("B6:C" & ºL + 1).Value
+    For Each ºcell In ThisWorkbook.Sheets("Relatório de Receita").Range("B5:B" & ºL)
+        If ºcell.Value = 0 Then
+            ºinicial = ºcell.Row
+            Exit For
+        End If
+    Next
+    For ºC = 2 To ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+        ºFASE = ThisWorkbook.Sheets("BD_TBL_VND").Cells(3, ºC).Value
+        ºTIPOLOGIA = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, ºC).Value
+        ºMES = ThisWorkbook.Sheets("BD_TBL_VND").Cells(2, ºC).Value
+        ºUNIDADES = ThisWorkbook.Sheets("BD_CAD_VND").Cells(2 + ºTIPOLOGIA, 5).Value - ThisWorkbook.Sheets("BD_CAD_VND").Cells(2 + ºTIPOLOGIA, 6).Value
+        If ºTIPOLOGIA < 31 Then
+            ºTexto = "F" & ºFASE & " | " & ºTIPOLOGIA & " - " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(2 + ºTIPOLOGIA, 4).Value & " | " & Round(ºUNIDADES * ThisWorkbook.Sheets("BD_TBL_REC").Cells(3, ºC).Value, 3) & " Und. | Mês(" & ºMES & ")"
+        Else
+            ºTexto = "F" & ºFASE & " | " & ºTIPOLOGIA & " - Vaga Extra | " & Round(ºUNIDADES * ThisWorkbook.Sheets("BD_TBL_REC").Cells(3, ºC).Value, 3) & " Und. | Mês(" & ºMES & ")"
+        End If
+        If ºC > 2 Then
+            ThisWorkbook.Sheets("Relatório de Receita").Range("D:I").Copy
+            ThisWorkbook.Sheets("Relatório de Receita").Cells(1, 4 + (6 * (ºC - 2))).PasteSpecial (xlPasteAll)
+        End If
+        ThisWorkbook.Sheets("Relatório de Receita").Cells(2, 4 + (6 * (ºC - 2))).Value = ºTexto
+        ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(ºinicial, 4 + (6 * (ºC - 2))).Address & ":" & Cells(ºL, 4 + (6 * (ºC - 2))).Address).FormulaR1C1 = "=BD_TBL_REC!R[" & 4 - ºinicial & "]C" & ºC
+        ºFORMULA_1 = ºFORMULA_1 & "+RC" & 4 + (6 * (ºC - 2))
+        ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(ºinicial, 5 + (6 * (ºC - 2))).Address & ":" & Cells(ºL, 5 + (6 * (ºC - 2))).Address).FormulaR1C1 = "=BD_TBL_REC_JUR!R[" & 4 - ºinicial & "]C" & ºC
+        ºFORMULA_2 = ºFORMULA_2 & "+RC" & 5 + (6 * (ºC - 2))
+        ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(ºinicial, 6 + (6 * (ºC - 2))).Address & ":" & Cells(ºL, 6 + (6 * (ºC - 2))).Address).FormulaR1C1 = "=BD_TBL_DESEMBOLSO!R[" & 4 - ºinicial & "]C" & ºC
+        ºFORMULA_3 = ºFORMULA_3 & "+RC" & 6 + (6 * (ºC - 2))
+        ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(ºinicial, 7 + (6 * (ºC - 2))).Address & ":" & Cells(ºL, 7 + (6 * (ºC - 2))).Address).FormulaR1C1 = "=BD_TBL_TERRENO!R[" & 4 - ºinicial & "]C" & ºC
+        ºFORMULA_4 = ºFORMULA_4 & "+RC" & 7 + (6 * (ºC - 2))
+        ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(ºinicial, 8 + (6 * (ºC - 2))).Address & ":" & Cells(ºL, 8 + (6 * (ºC - 2))).Address).FormulaR1C1 = "=BD_TBL_DEFLA!R[" & 4 - ºinicial & "]C" & ºC
+        ºFORMULA_5 = ºFORMULA_5 & "+RC" & 8 + (6 * (ºC - 2))
+        ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(ºinicial, 9 + (6 * (ºC - 2))).Address & ":" & Cells(ºL, 9 + (6 * (ºC - 2))).Address).FormulaR1C1 = "=SUM(RC[-5]:RC[" & 4 - ºinicial & "])"
+        ºFORMULA_6 = ºFORMULA_6 & "+RC" & 9 + (6 * (ºC - 2))
+    Next
+    ºC = ThisWorkbook.Sheets("Relatório de Receita").Cells(3, Columns.Count).End(xlToLeft).Column + 1
+    ThisWorkbook.Sheets("Relatório de Receita").Range("D:I").Copy
+    ThisWorkbook.Sheets("Relatório de Receita").Cells(1, ºC).PasteSpecial (xlPasteAll)
+    ThisWorkbook.Sheets("Relatório de Receita").Cells(2, ºC).Value = "TOTAL GERAL"
+    ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(5, ºC).Address & ":" & Cells(ºL, ºC).Address).FormulaR1C1 = "=" & ºFORMULA_1
+    ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(5, ºC + 1).Address & ":" & Cells(ºL, ºC + 1).Address).FormulaR1C1 = "=" & ºFORMULA_2
+    ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(5, ºC + 2).Address & ":" & Cells(ºL, ºC + 2).Address).FormulaR1C1 = "=" & ºFORMULA_3
+    ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(5, ºC + 3).Address & ":" & Cells(ºL, ºC + 3).Address).FormulaR1C1 = "=" & ºFORMULA_4
+    ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(5, ºC + 4).Address & ":" & Cells(ºL, ºC + 4).Address).FormulaR1C1 = "=" & ºFORMULA_5
+    ThisWorkbook.Sheets("Relatório de Receita").Range(Cells(5, ºC + 5).Address & ":" & Cells(ºL, ºC + 5).Address).FormulaR1C1 = "=" & ºFORMULA_6
+    ThisWorkbook.Sheets("Relatório de Receita").Calculate
+    
+    
+    ºARQUIVO = Replace(ºDIRETORIO, "\BD", "") & "\CONFIGURAÇÕES\Modelo Relatorios.xlsx"
+    
+    Dim fso As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If fso.FolderExists(ºDIRETORIO) Then
+        Set ºEXPT = Workbooks.Open(ºARQUIVO, False, True)
+        ThisWorkbook.Sheets("Relatório de Receita").Cells.Copy
+        ºEXPT.Sheets("Relatório de Receita").Cells.PasteSpecial (xlPasteAll)
+        ºEXPT.Sheets("Relatório de Receita").UsedRange.Value = ºEXPT.Sheets("Relatório de Receita").UsedRange.Value
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+            ºEXPT.Sheets("Relatório de Receita").Outline.ShowLevels RowLevels:=2
+        Else
+            ºEXPT.Sheets("Relatório de Receita").Outline.ShowLevels RowLevels:=1
+        End If
+        ºEXPT.Sheets("Relatório de Receita").Copy
+        Application.FileDialog(msoFileDialogSaveAs).FilterIndex = 1
+        Application.FileDialog(msoFileDialogSaveAs).InitialFileName = newString("Receitas " & ºCODIGO_EMP("") & "-" & ºCOD_VERSÃO("") & " " & Replace(Replace(ºNOME_EMP("") & " " & ºNOME_VERSÃO(""), "\", ""), "/", "") & ".xlsx")
+        Application.FileDialog(msoFileDialogSaveAs).Show
+        If Application.FileDialog(msoFileDialogSaveAs).SelectedItems.Count > 0 Then
+            ºCaminho = newString(Application.FileDialog(msoFileDialogSaveAs).SelectedItems(1))
+        Else
+            ºCaminho = "book de viabilidade"
+        End If
+        Do Until Dir(ºCaminho) = ""
+            MsgBox "Arquivo ja existe!!"
+            Application.FileDialog(msoFileDialogSaveAs).Show
+            If Application.FileDialog(msoFileDialogSaveAs).SelectedItems.Count > 0 Then
+                ºCaminho = newString(Application.FileDialog(msoFileDialogSaveAs).SelectedItems(1))
+            Else
+                ºCaminho = "book de viabilidade"
+            End If
+        Loop
+        ActiveWorkbook.SaveAs ºCaminho
+        ActiveWorkbook.Close
+        MsgBox ("Exportado com sucesso para: " & ºCaminho)
+        If MsgBox("deseja abrir o arquivo?", vbYesNo) = vbYes Then
+            Dim ºExcel As Object
+            Set ºExcel = GetObject(ThisWorkbook.Sheets("BD_APOIO").Range("K14").Value)
+            ºExcel.Parent.Workbooks.Open ºCaminho
+        End If
+        Application.CutCopyMode = False
+        ºEXPT.Close False
+    Else
+        MsgBox ("Não é possivel exportar o relatório no modo offline")
+    End If
+    Application.DisplayAlerts = True
+     
+End Sub
+Sub Gerar_Book_Excel()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim ºsheet As Worksheet
+    Dim ºC, ºsh As Integer
+    Dim ºL_T, ºN As Double
+    Dim ºEXPT, ºEXPT_WB As Workbook
+    Dim ºARQUIVO As String
+    DoEvents
+    Call AttBDTipologias
+    Call DescarregarInfosTerreno
+    Call Checar_Desembolso_Verbas
+    If Criar_Tabela = "erro" Or CurvaRec = "erro" Then Exit Sub
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value = ""
+    Call Cont_Area_PVT(1)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value <> "" And ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value > 0 Then
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AA47").Value = ""
+        
+        Call gerar_fluxo
+        Call SENSIBILIDADE
+        Call CALCULAR_INFO_CAPA
+        Call preencher_perfil
+        Call Preencher_Premissas
+        
+        ºC = ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, Columns.Count).End(xlToLeft).Column
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(6).Address & ":" & Columns(ºC).Address).ColumnWidth = 12.5
+        ThisWorkbook.Sheets("Fluxo Operacional").Outline.ShowLevels RowLevels:=1, ColumnLevels:=1
+        ºC = ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, Columns.Count).End(xlToLeft).Column
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 4).Address & ":" & Cells(4, ºC).Address).Borders(xlEdgeLeft).Weight = xlMedium
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 4).Address & ":" & Cells(4, ºC).Address).Borders(xlEdgeTop).Weight = xlMedium
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 4).Address & ":" & Cells(4, ºC).Address).Borders(xlEdgeBottom).Weight = xlMedium
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 4).Address & ":" & Cells(4, ºC).Address).Borders(xlEdgeRight).Weight = xlMedium
+        ºL_T = ThisWorkbook.Sheets("Fluxo Operacional").Cells(Rows.Count, 2).End(xlUp).Row
+        ThisWorkbook.Sheets("Fluxo Operacional").PageSetup.PrintArea = "$B$2:" & Cells(ºL_T, ºC).Address
+        
+        
+        ºARQUIVO = Replace(ºDIRETORIO, "\BD", "") & "\CONFIGURAÇÕES\Modelo Relatorios.xlsx"
+        Dim fso As Object
+        Set fso = CreateObject("Scripting.FileSystemObject")
+        If fso.FolderExists(ºDIRETORIO) Then
+                
+            Set ºEXPT = Workbooks.Open(ºARQUIVO, False, True)
+            
+            ThisWorkbook.Sheets("Capa Viabilidade").Cells.Copy
+            ºEXPT.Sheets("Capa Viabilidade").Cells.PasteSpecial (xlPasteAll)
+            ºEXPT.Sheets("Capa Viabilidade").UsedRange.Value = ºEXPT.Sheets("Capa Viabilidade").UsedRange.Value
+                    
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells.Copy
+            ºEXPT.Sheets("Fluxo Operacional").Cells.PasteSpecial (xlPasteAll)
+            ºEXPT.Sheets("Fluxo Operacional").UsedRange.Value = ºEXPT.Sheets("Fluxo Operacional").UsedRange.Value
+                    
+            ThisWorkbook.Sheets("Premissas").Cells.Copy
+            ºEXPT.Sheets("Premissas").Cells.PasteSpecial (xlPasteAll)
+            ºEXPT.Sheets("Premissas").UsedRange.Value = ºEXPT.Sheets("Premissas").UsedRange.Value
+                    
+            ThisWorkbook.Sheets("Perfil de Venda").Cells.Copy
+            ºEXPT.Sheets("Perfil de Venda").Cells.PasteSpecial (xlPasteAll)
+            ºEXPT.Sheets("Perfil de Venda").UsedRange.Value = ºEXPT.Sheets("Perfil de Venda").UsedRange.Value
+                
+            ºEXPT.Sheets(Array("Capa Viabilidade", "Fluxo Operacional", "Premissas", "Perfil de Venda")).Copy
+            Application.FileDialog(msoFileDialogSaveAs).FilterIndex = 1
+            Application.FileDialog(msoFileDialogSaveAs).InitialFileName = newString("Book " & ºCODIGO_EMP("") & "-" & ºCOD_VERSÃO("") & " " & Replace(Replace(ºNOME_EMP("") & " " & ºNOME_VERSÃO(""), "\", ""), "/", "") & ".xlsx")
+            Application.FileDialog(msoFileDialogSaveAs).Show
+            If Application.FileDialog(msoFileDialogSaveAs).SelectedItems.Count > 0 Then
+                ºCaminho = newString(Application.FileDialog(msoFileDialogSaveAs).SelectedItems(1))
+            Else
+                ºCaminho = "book de viabilidade"
+            End If
+            Do Until Dir(ºCaminho) = ""
+                MsgBox "Arquivo ja existe!!"
+                Application.FileDialog(msoFileDialogSaveAs).Show
+                If Application.FileDialog(msoFileDialogSaveAs).SelectedItems.Count > 0 Then
+                    ºCaminho = newString(Application.FileDialog(msoFileDialogSaveAs).SelectedItems(1))
+                Else
+                    ºCaminho = "book de viabilidade"
+                End If
+            Loop
+            ActiveWorkbook.SaveAs ºCaminho
+            ActiveWorkbook.Close
+            MsgBox ("Exportado com sucesso para: " & ºCaminho)
+            If MsgBox("deseja abrir o arquivo?", vbYesNo) = vbYes Then
+                Dim ºExcel As Object
+                Set ºExcel = GetObject(ThisWorkbook.Sheets("BD_APOIO").Range("K14").Value)
+                ºExcel.Parent.Workbooks.Open ºCaminho
+            End If
+            Application.CutCopyMode = False
+            Application.Visible = True
+            ºEXPT.Close False
+            Application.Visible = False
+        Else
+            MsgBox ("Não é possivel exportar o relatório no modo offline")
+        End If
+                    
+        ThisWorkbook.Sheets("Fluxo Operacional").Outline.ShowLevels RowLevels:=2, ColumnLevels:=2
+        ºC = ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, Columns.Count).End(xlToLeft).Column
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(5).Address & ":" & Columns(ºC).Address).Columns.AutoFit
+    End If
+Application.DisplayAlerts = True
+ 
+End Sub
+Sub Gerar_Book_PDF()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Application.ScreenUpdating = False
+    Dim ºsheet As Worksheet
+    Dim ºC, ºsh As Integer
+    Dim ºL_T, ºN As Double
+    Dim ºEXPT As Workbook
+    Dim ºARQUIVO As String
+    DoEvents
+    Call AttBDTipologias
+    Call DescarregarInfosTerreno
+    Call Checar_Desembolso_Verbas
+    If Criar_Tabela = "erro" Or CurvaRec = "erro" Then Exit Sub
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value = ""
+    Call Cont_Area_PVT(1)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value <> "" And ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value > 0 Then
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AA47").Value = ""
+        
+        Call gerar_fluxo
+        Call SENSIBILIDADE
+        Call CALCULAR_INFO_CAPA
+        Call preencher_perfil
+        Call Preencher_Premissas
+        
+        ºC = ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, Columns.Count).End(xlToLeft).Column
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(6).Address & ":" & Columns(ºC).Address).ColumnWidth = 12.5
+        ThisWorkbook.Sheets("Fluxo Operacional").Outline.ShowLevels RowLevels:=1, ColumnLevels:=1
+        ºC = ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, Columns.Count).End(xlToLeft).Column
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 4).Address & ":" & Cells(4, ºC).Address).Borders(xlEdgeLeft).Weight = xlMedium
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 4).Address & ":" & Cells(4, ºC).Address).Borders(xlEdgeTop).Weight = xlMedium
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 4).Address & ":" & Cells(4, ºC).Address).Borders(xlEdgeBottom).Weight = xlMedium
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 4).Address & ":" & Cells(4, ºC).Address).Borders(xlEdgeRight).Weight = xlMedium
+        ºL_T = ThisWorkbook.Sheets("Fluxo Operacional").Cells(Rows.Count, 2).End(xlUp).Row
+        DoEvents
+        Application.Wait (Now + TimeValue("00:00:01"))
+        ThisWorkbook.Sheets("Fluxo Operacional").PageSetup.PrintArea = "$B$2:" & Cells(ºL_T, ºC).Address
+        DoEvents
+        
+        ºARQUIVO = Replace(ºDIRETORIO, "\BD", "") & "\CONFIGURAÇÕES\Modelo Relatorios.xlsx"
+        Dim fso As Object
+        Set fso = CreateObject("Scripting.FileSystemObject")
+        If fso.FolderExists(ºDIRETORIO) Then
+            Set ºEXPT = Workbooks.Open(ºARQUIVO, False, True)
+            
+            ThisWorkbook.Sheets("Capa Viabilidade").Cells.Copy
+            ºEXPT.Sheets("Capa Viabilidade").Cells.PasteSpecial (xlPasteAll)
+            ºEXPT.Sheets("Capa Viabilidade").UsedRange.Value = ºEXPT.Sheets("Capa Viabilidade").UsedRange.Value
+                    
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells.Copy
+            ºEXPT.Sheets("Fluxo Operacional").Cells.PasteSpecial (xlPasteAll)
+            ºEXPT.Sheets("Fluxo Operacional").UsedRange.Value = ºEXPT.Sheets("Fluxo Operacional").UsedRange.Value
+            ºEXPT.Sheets("Fluxo Operacional").PageSetup.PrintArea = "$B$2:" & Cells(ºL_T, ºC).Address
+                    
+            ThisWorkbook.Sheets("Premissas").Cells.Copy
+            ºEXPT.Sheets("Premissas").Cells.PasteSpecial (xlPasteAll)
+            ºEXPT.Sheets("Premissas").UsedRange.Value = ºEXPT.Sheets("Premissas").UsedRange.Value
+                    
+            ThisWorkbook.Sheets("Perfil de Venda").Cells.Copy
+            ºEXPT.Sheets("Perfil de Venda").Cells.PasteSpecial (xlPasteAll)
+            ºEXPT.Sheets("Perfil de Venda").UsedRange.Value = ºEXPT.Sheets("Perfil de Venda").UsedRange.Value
+                    
+            ºEXPT.Sheets(Array("Capa Viabilidade", "Fluxo Operacional", "Premissas", "Perfil de Venda")).Select
+            
+            Application.FileDialog(msoFileDialogSaveAs).FilterIndex = 25
+            Application.FileDialog(msoFileDialogSaveAs).InitialFileName = newString("Book " & ºCODIGO_EMP("") & "-" & ºCOD_VERSÃO("") & " " & Replace(Replace(ºNOME_EMP("") & " " & ºNOME_VERSÃO(""), "\", ""), "/", "") & ".pdf")
+            Application.FileDialog(msoFileDialogSaveAs).Show
+            If Application.FileDialog(msoFileDialogSaveAs).SelectedItems.Count > 0 Then
+                ºCaminho = newString(Application.FileDialog(msoFileDialogSaveAs).SelectedItems(1))
+            Else
+                ºCaminho = "book de viabilidade"
+            End If
+            Do Until Dir(ºCaminho) = ""
+                MsgBox "Arquivo ja existe!!"
+                Application.FileDialog(msoFileDialogSaveAs).Show
+                If Application.FileDialog(msoFileDialogSaveAs).SelectedItems.Count > 0 Then
+                    ºCaminho = newString(Application.FileDialog(msoFileDialogSaveAs).SelectedItems(1))
+                Else
+                    ºCaminho = "book de viabilidade"
+                End If
+            Loop
+            ActiveSheet.ExportAsFixedFormat Type:=xlTypePDF, filename:=ºCaminho, Quality:=xlQualityStandard, _
+            IncludeDocProperties:=True, IgnorePrintAreas:=False, _
+            OpenAfterPublish:=False
+            MsgBox ("Exportado com sucesso para: " & ºCaminho)
+            Application.CutCopyMode = False
+            ºEXPT.Close False
+        Else
+            MsgBox ("Não é possivel exportar o relatório no modo offline")
+        End If
+        ThisWorkbook.Sheets("Fluxo Operacional").Outline.ShowLevels RowLevels:=2, ColumnLevels:=2
+        ºC = ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, Columns.Count).End(xlToLeft).Column
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(5).Address & ":" & Columns(ºC).Address).Columns.AutoFit
+    End If
+    Application.DisplayAlerts = True
+End Sub
+
+
+Function ºGET_COD_PERF_V(ºSH_IMP)
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Function
+
+Proximo:
+    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viabil_v2&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viabil_v2&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+    For ºL = ºR_1 To ºR_2 Step 1
+        'CODIGO PERFIL
+        If Application.IfError(Application.Search("&lt;tipo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+            If Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tipo&gt;", ""), "&lt;/tipo&gt;", "") = "T" Then GoTo Proximo
+            ºGET_COD_PERF_V = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tipo&gt;", ""), "&lt;/tipo&gt;", "")
+            Exit Function
+        End If
+    Next
+End Function
+Sub Importar(ºARQUIVO_IMP)
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    If ºARQUIVO_IMP <> "" Then
+        If Application.IfError(Application.Search(".viab", ºARQUIVO_IMP), 0) = 0 Then
+            Call CLEARALL
+            Workbooks.Open ºARQUIVO_IMP, , , , "wmscyrela2017!,!,"
+            Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+            Set F_SHT = Workbooks(Dir(ºARQUIVO_IMP)).Sheets("BD_CAD_VND")
+            ºEMPREENDIMENTO = F_SHT.Range("D1").Value
+            Set ºFS = CreateObject("Scripting.FileSystemObject")
+            ºARQUIVO = Dir(ºDIRETORIO & "\" & ºPASTA & "\*.VCWBD")
+            Do While ºARQUIVO <> ""
+                ºCODIGO_ = Left(ºARQUIVO, 6)
+                If ºEMPREENDIMENTO = Replace(Replace(UCase(ºARQUIVO), ".VCWBD", ""), ºCODIGO_ & " ", "") Then
+                    ºARQUIVO_OPEN = ºDIRETORIO & "\" & ºPASTA & "\" & ºARQUIVO
+                    Workbooks.Open ºARQUIVO_OPEN, , , , "wmscyrela2017!,!,"
+                    ºPLANILHAS = Workbooks(ºARQUIVO).Sheets.Count
+                    Workbooks(ºARQUIVO).Sheets("000000").Copy After:=Workbooks(ºARQUIVO).Sheets(ºPLANILHAS)
+                    Workbooks(ºARQUIVO).Sheets(ºPLANILHAS + 1).Name = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Name) + 1, "000000")
+                    ºPLANILHAS = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Name) + 1, "000000")
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("A" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(ºPLANILHAS - 2, "000000")
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("B" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
+                    ºDESCRIÇÃO = F_SHT.Range("B1").Value
+                    Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Range("B1").Value = F_SHT.Range("B1").Value
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("G" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Environ("Username")
+                    Workbooks(ºARQUIVO).Close True
+                    ºNOME_EMP (ºEMPREENDIMENTO)
+                    ºNOME_VERSÃO (ºDESCRIÇÃO)
+                    ºCOD_VERSÃO (ºPLANILHAS)
+                    ºCODIGO_EMP (ºCODIGO_)
+                    Exit Do
+                End If
+                ºARQUIVO = Dir
+                DoEvents
+            Loop
+            If ºARQUIVO_OPEN = "" Then
+                Set fso = CreateObject("Scripting.FileSystemObject")
+                Set objFolder = fso.GetFolder(ºDIRETORIO & "\")
+                For Each objSubFolder In objFolder.subfolders
+                    For Each FileInFolder In objSubFolder.Files
+                        If CDbl(Left(FileInFolder.Name, 6)) >= ºCod Then ºCod = CDbl(Left(FileInFolder.Name, 6)) + 1
+                    Next FileInFolder
+                Next objSubFolder
+                FileCopy ºDIRETORIO & "\" & "Padawan.vcwbd", ºDIRETORIO & "\" & ºPASTA & "\" & Format(ºCod, "000000") & " " & ºEMPREENDIMENTO & ".vcwbd"
+                ºARQUIVO = Format(ºCod, "000000") & " " & ºEMPREENDIMENTO & ".vcwbd"
+                SetFileDate ºDIRETORIO & "\" & ºPASTA & "\" & ºARQUIVO, Now, Now
+                Workbooks.Open ºDIRETORIO & "\" & ºPASTA & "\" & ºARQUIVO, , , , "wmscyrela2017!,!,"
+                ºPLANILHAS = Workbooks(ºARQUIVO).Sheets.Count
+                Workbooks(ºARQUIVO).Sheets("000000").Copy After:=Workbooks(ºARQUIVO).Sheets(ºPLANILHAS)
+                Workbooks(ºARQUIVO).Sheets(ºPLANILHAS + 1).Name = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Name) + 1, "000000")
+                ºPLANILHAS = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Name) + 1, "000000")
+                ºDESCRIÇÃO = F_SHT.Range("B1").Value
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("A" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = ºPLANILHAS
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("B" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("D" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = F_SHT.Range("B1").Value
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("G" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
+                
+                Workbooks(ºARQUIVO).Close True
+                
+                ºNOME_EMP (ºEMPREENDIMENTO)
+                ºNOME_VERSÃO (ºDESCRIÇÃO)
+                ºCOD_VERSÃO (ºPLANILHAS)
+                ºCODIGO_EMP (Format(ºCod, "000000"))
+            End If
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Nome
+            '----------------------------------------------------------------------------------------
+         
+            ºNOME_VERSÃO (F_SHT.Range("B1").Value)
+            ºDATA_BASE (F_SHT.Range("C1").Value)
+            ºDATA_FASE_1 (F_SHT.Range("E1").Value)
+            '----------------------------------------------------------------------------------------
+            '                                   Tipologias
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("A3:N33").Value = F_SHT.Range("A3:N33").Value
+            ºL = D_SHT.Range("B34").End(xlUp).Row
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Vagas Extras
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("A35:H55").Value = F_SHT.Range("A35:H55").Value
+        
+            '----------------------------------------------------------------------------------------
+            '                                   Curvas de Vendas
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("A57:N106").Value = F_SHT.Range("A57:N106").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Tabela de Vendas
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("A108:NA157").Value = F_SHT.Range("A108:NA157").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Perfil de Taxas
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("A159:T208").NumberFormat = "@"
+            D_SHT.Range("A159:T208").Value = F_SHT.Range("A159:T208").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Custo de Obra
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("A210:N259").Value = F_SHT.Range("A210:N259").Value
+            D_SHT.Range("S210:S259").Value = F_SHT.Range("S210:S259").Value
+            For ºL = 210 To F_SHT.Cells(259, 2).End(xlUp).Row
+                ' Valor Marjorado
+                ºC = Application.Match("Valor Marjorado", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+                ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).FormulaR1C1 = "=(((RC[-1]+RC[4])*R1C17)/(SUMPRODUCT(RC[-7]:RC[-5]*1)+1))-RC[4]"
+                ' Valor taxa gererncial
+                ºC = Application.Match("Valor taxa gererncial", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+                ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value = "=RC[-1]*RC[-8]"
+                ' Valor taxa gererncial
+                ºC = Application.Match("Valor taxa efetiva", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+                ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value = "=RC[-2]*RC[-8]"
+                ' Valor Dtas
+                ºC = Application.Match("Valor Dtas", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+                ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value = "=RC[-3]*RC[-8]"
+            Next
+
+            '----------------------------------------------------------------------------------------
+            '                                   Curva de Obra
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("B260:" & Cells(461, F_SHT.Cells(260, Columns.Count).End(xlToLeft).Column + 1).Address).Value = F_SHT.Range("B260:" & Cells(461, F_SHT.Cells(260, Columns.Count).End(xlToLeft).Column + 1).Address).Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Terreno
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("C462:C479").Value = F_SHT.Range("C462:C479").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Associativo
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("B480:C496").Value = F_SHT.Range("B480:C496").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Metragens
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("A498:E521").Value = F_SHT.Range("A498:E521").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Tipos de Lançamento
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("B581:D880").Value = F_SHT.Range("B581:D880").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Participação Permuta
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("C881:C899").Value = F_SHT.Range("C881:C899").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Perfil de Venda
+            '----------------------------------------------------------------------------------------
+            D_SHT.Range("A901:I950").Value = F_SHT.Range("A901:I950").Value
+            
+            '----------------------------------------------------------------------------------------
+            '                                   Lançamentos
+            '----------------------------------------------------------------------------------------
+            Set D_SHT = ThisWorkbook.Sheets("Lançamentos")
+            Set F_SHT = Workbooks(Dir(ºARQUIVO_IMP)).Sheets("Lançamentos")
+            
+            D_SHT.Calculate
+            
+            D_SHT.Unprotect "moranga13"
+            D_SHT.Range(F_SHT.UsedRange.Address).Value = F_SHT.UsedRange.Value
+            
+            Workbooks(Dir(ºARQUIVO_IMP)).Close , False
+        ElseIf Application.IfError(Application.Search(".viab", ºARQUIVO_IMP), 0) <> 0 Then
+            Call CLEARALL
+            ThisWorkbook.Unprotect "moranga13"
+            Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+            Set ºSH_IMP = ThisWorkbook.Sheets.Add
+            With ActiveSheet.QueryTables.Add(Connection:="TEXT;" & ºARQUIVO_IMP, Destination:=ºSH_IMP.Range("$A$1"))
+                .Name = Dir(ºARQUIVO_IMP)
+                .FieldNames = True
+                .RowNumbers = False
+                .FillAdjacentFormulas = False
+                .PreserveFormatting = True
+                .RefreshOnFileOpen = False
+                .RefreshStyle = xlInsertDeleteCells
+                .SavePassword = False
+                .SaveData = True
+                .AdjustColumnWidth = True
+                .RefreshPeriod = 0
+                .TextFilePromptOnRefresh = False
+                .TextFilePlatform = 65001
+                .TextFileStartRow = 1
+                .TextFileParseType = xlDelimited
+                .TextFileTextQualifier = xlTextQualifierDoubleQuote
+                .TextFileConsecutiveDelimiter = False
+                .TextFileTabDelimiter = True
+                .TextFileSemicolonDelimiter = False
+                .TextFileCommaDelimiter = False
+                .TextFileSpaceDelimiter = False
+                .TextFileColumnDataTypes = Array(1, 1, 1, 1)
+                .TextFileTrailingMinusNumbers = True
+                .Refresh BackgroundQuery:=False
+            End With
+            
+            Dim ºR_1, ºR_2, ºI As Double
+            Set ºSH_BD = ThisWorkbook.Sheets("bd_cad_vnd")
+            
+            '------------------------------------------------------------------------------------------------------
+            '                                           EMPREENDIMENTO
+            '------------------------------------------------------------------------------------------------------
+            ºR_1 = 1
+            ºR_1 = Application.IfError(Application.Match("&lt;curimp_empreend&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+            ºR_2 = Application.IfError(Application.Match("&lt;/curimp_empreend&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+            For ºL = ºR_1 To ºR_2 Step 1
+                'CÓDIGO
+                If Application.IfError(Application.Search("&lt;codigo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                    ºCodEmp_ = UCase(Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;codigo&gt;", ""), "&lt;/codigo&gt;", ""))
+                End If
+                'DESCRIÇÃO
+                If Application.IfError(Application.Search("&lt;descricao&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                    ºEMPREENDIMENTO = UCase(Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;descricao&gt;", ""), "&lt;/descricao&gt;", ""))
+                    Exit For
+                End If
+            Next
+            '------------------------------------------------------------------------------------------------------
+            '                                           NOME DO ESTUDO
+            '------------------------------------------------------------------------------------------------------
+            ºR_1 = 1
+            ºR_1 = Application.IfError(Application.Match("&lt;curimp_viabil&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+            ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viabil&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+            For ºL = ºR_1 To ºR_2 Step 1
+                'DESCRIÇÃO
+                If Application.IfError(Application.Search("&lt;descricao&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                    ºDESCRIÇÃO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;descricao&gt;", ""), "&lt;/descricao&gt;", "")
+                End If
+                'VERSÃO
+                If Application.IfError(Application.Search("&lt;codigo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                    ºVersão = UCase(Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;codigo&gt;", ""), "&lt;/codigo&gt;", ""))
+                End If
+                'DATA BASE
+                If Application.IfError(Application.Search("&lt;base&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                    ºDatabA = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;base&gt;", ""), "&lt;/base&gt;", "")
+                    Exit For
+                End If
+            Next
+            Set ºFS = CreateObject("Scripting.FileSystemObject")
+            ºARQUIVO = Dir(ºDIRETORIO & "\" & ºPASTA & "\*.VCWBD")
+            ºULT_CODIGO = 1
+            Do While ºARQUIVO <> ""
+                ºCODIGO_ = Left(ºARQUIVO, 6)
+                If ºEMPREENDIMENTO = Replace(Replace(UCase(ºARQUIVO), ".VCWBD", ""), ºCODIGO_ & " ", "") Then
+                    ºARQUIVO_OPEN = ºDIRETORIO & "\" & ºPASTA & "\" & ºARQUIVO
+                    Workbooks.Open ºARQUIVO_OPEN, , , , "wmscyrela2017!,!,"
+                    ºPLANILHAS = Workbooks(ºARQUIVO).Sheets.Count
+                    Workbooks(ºARQUIVO).Sheets("000000").Copy After:=Workbooks(ºARQUIVO).Sheets(ºPLANILHAS)
+                    ºPLANILHAS = Workbooks(ºARQUIVO).Sheets.Count
+                    Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Name = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS - 1).Name) + 1, "000000")
+                    ºPLANILHAS = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS - 1).Name) + 1, "000000")
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("A" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(ºPLANILHAS - 2, "000000")
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("B" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
+                    Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Range("B1").Value = ºCodEmp_ & "-" & ºVersão & "|" & ºDESCRIÇÃO
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
+                    Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("G" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
+                        
+                    Workbooks(ºARQUIVO).Close True
+                '----------------------------------------------------------------------------------------
+                '                                   Nome
+                '----------------------------------------------------------------------------------------
+                        
+                    ºNOME_EMP (ºEMPREENDIMENTO)
+                    ºNOME_VERSÃO (ºCodEmp_ & "-" & ºVersão & "|" & ºDESCRIÇÃO)
+                    ºCOD_VERSÃO (ºPLANILHAS)
+                    ºCODIGO_EMP (ºCODIGO_)
+                    If ºDatabA <> "" Then
+                        ºDATA_BASE (Format(Application.EDate(ºDatabA, -1), "mm/yyyy"))
+                        ºDATA_FASE_1 (ºDATA_BASE(""))
+                    Else
+                        ºDATA_BASE (Format(Application.EDate(Now, -1), "mm/yyyy"))
+                        ºDATA_FASE_1 (ºDATA_BASE(""))
+                    End If
+                    Exit Do
+                End If
+                ºARQUIVO = Dir
+                DoEvents
+            Loop
+            If ºARQUIVO_OPEN = "" Then
+                Set fso = CreateObject("Scripting.FileSystemObject")
+                Set objFolder = fso.GetFolder(ºDIRETORIO & "\")
+                ºCod = 1
+                For Each objSubFolder In objFolder.subfolders
+                    For Each FileInFolder In objSubFolder.Files
+                        If CDbl(Left(FileInFolder.Name, 6)) >= ºCod Then ºCod = CDbl(Left(FileInFolder.Name, 6)) + 1
+                    Next FileInFolder
+                Next objSubFolder
+                FileCopy ºDIRETORIO & "\" & "Padawan.vcwbd", ºDIRETORIO & "\" & ºPASTA & "\" & Format(ºCod, "000000") & " " & ºEMPREENDIMENTO & ".vcwbd"
+                ºARQUIVO = Format(ºCod, "000000") & " " & ºEMPREENDIMENTO & ".vcwbd"
+                SetFileDate ºDIRETORIO & "\" & ºPASTA & "\" & ºARQUIVO, Now, Now
+                Workbooks.Open ºDIRETORIO & "\" & ºPASTA & "\" & ºARQUIVO, , , , "wmscyrela2017!,!,"
+                ºPLANILHAS = Workbooks(ºARQUIVO).Sheets.Count
+                Workbooks(ºARQUIVO).Sheets("000000").Copy After:=Workbooks(ºARQUIVO).Sheets(ºPLANILHAS)
+                Workbooks(ºARQUIVO).Sheets(ºPLANILHAS + 1).Name = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Name) + 1, "000000")
+                ºPLANILHAS = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Name) + 1, "000000")
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("A" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = ºPLANILHAS
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("B" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
+                Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Range("B1").Value = ºCodEmp_ & "-" & ºVersão & "|" & ºDESCRIÇÃO
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
+                Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("G" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
+                Workbooks(ºARQUIVO).Close True
+                
+                '----------------------------------------------------------------------------------------
+                '                                   Nome
+                '----------------------------------------------------------------------------------------
+                ºNOME_EMP (ºEMPREENDIMENTO)
+                ºNOME_VERSÃO (ºCodEmp_ & "-" & ºVersão & "|" & ºDESCRIÇÃO)
+                ºCOD_VERSÃO (ºPLANILHAS)
+                ºCODIGO_EMP (Format(ºCod, "000000"))
+                If ºDatabA <> "" Then
+                    ºDATA_BASE (Format(Application.EDate(ºDatabA, -1), "mm/yyyy"))
+                    ºDATA_FASE_1 (ºDATA_BASE(""))
+                Else
+                    ºDATA_BASE (Format(Application.EDate(Now, -1), "mm/yyyy"))
+                    ºDATA_FASE_1 (ºDATA_BASE(""))
+                End If
+            End If
+            '------------------------------------------------------------------------------------------------------
+            '                                           TIPOLOGIAS
+            '------------------------------------------------------------------------------------------------------
+            Dim ºN_Tipologias As Double
+            Dim ºFASE, ºUNIDADES, ºPERMUTAS, ºAREA_COB, ºAREA_DESC, ºFATOR, ºPREÇO As Variant
+            ºN_TipoS = Application.CountIf(ºSH_IMP.Range("B:B"), "&lt;curimp_tipo_unid&gt;")
+            ºR_1 = 1
+            ºR_1_1 = 1
+            ReDim CÓDIGO_TPLG(ºN_TipoS, 2)
+            If ºN_TipoS > 0 Then
+                For ºI = 1 To ºN_TipoS
+                    ºR_1_1 = Application.IfError(Application.Match("&lt;curimp_tipo_unid&gt;", ºSH_IMP.Range("B" & ºR_1_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1_1
+                    ºR_2_2 = Application.IfError(Application.Match("&lt;/curimp_tipo_unid&gt;", ºSH_IMP.Range("B" & ºR_1_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1_1
+                    For ºL = ºR_1_1 To ºR_2_2 Step 1
+                        'CÓDIGO
+                        If Application.IfError(Application.Search("&lt;codigo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            CÓDIGO_TPLG(ºI, 1) = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;codigo&gt;", ""), "&lt;/codigo&gt;", "")
+                        End If
+                        'DESCRIÇÃO
+                        If Application.IfError(Application.Search("&lt;descricao&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            CÓDIGO_TPLG(ºI, 2) = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;descricao&gt;", ""), "&lt;/descricao&gt;", "")
+                        End If
+                    Next
+                Next
+            End If
+            ºN_Tipologias = Application.CountIf(ºSH_IMP.Range("B:B"), "&lt;curimp_viabil4&gt;")
+            ºR_1 = 1
+            ºR_1_1 = 1
+            If ºN_Tipologias > 0 Then
+                For ºI = 1 To ºN_Tipologias
+                    ºSH_BD.Range("B" & 2 + ºI).Value = True
+                    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viabil4&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viabil4&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    For ºL = ºR_1 To ºR_2 Step 1
+                        'DESCRIÇÃO
+                        If Application.IfError(Application.Search("&lt;tipo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºCD_TIPO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tipo&gt;", ""), "&lt;/tipo&gt;", "")
+                            For ºC = 1 To ºN_TipoS
+                                If ºCD_TIPO = CÓDIGO_TPLG(ºC, 1) Then
+                                    ºDESCRIÇÃO = CÓDIGO_TPLG(ºC, 2)
+                                    Exit For
+                                End If
+                            Next
+                            ºSH_BD.Range("D" & 2 + ºI).Value = ºDESCRIÇÃO
+                        End If
+                        'FASE
+                        If Application.IfError(Application.Search("&lt;fase&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºFASE = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;fase&gt;", ""), "&lt;/fase&gt;", "")
+                            ºSH_BD.Range("C" & 2 + ºI).Value = ºFASE
+                        End If
+                        'UNIDADES
+                        If Application.IfError(Application.Search("&lt;unidades&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºUNIDADES = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;unidades&gt;", ""), "&lt;/unidades&gt;", "")
+                            ºSH_BD.Range("E" & 2 + ºI).Value = ºUNIDADES
+                        End If
+                        'PERMUTAS
+                        If Application.IfError(Application.Search("&lt;permuta&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºPERMUTAS = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;permuta&gt;", ""), "&lt;/permuta&gt;", "")
+                            ºSH_BD.Range("F" & 2 + ºI).Value = ºPERMUTAS
+                       End If
+                        'AREA COBERTA
+                        If Application.IfError(Application.Search("&lt;area_u&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºAREA_COB = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;area_u&gt;", ""), "&lt;/area_u&gt;", "")
+                            ºSH_BD.Range("G" & 2 + ºI).Value = ºAREA_COB
+                        End If
+                        'AREA DESCOBERTA
+                        If Application.IfError(Application.Search("&lt;adesc&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºAREA_DESC = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;adesc&gt;", ""), "&lt;/adesc&gt;", "")
+                            ºSH_BD.Range("H" & 2 + ºI).Value = ºAREA_DESC
+                        End If
+                       'FATOR AREA DESCOBERTA
+                        If Application.IfError(Application.Search("&lt;fat_area_e&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºFATOR = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;fat_area_e&gt;", ""), "&lt;/fat_area_e&gt;", "")
+                            ºSH_BD.Range("I" & 2 + ºI).Value = ºFATOR
+                        End If
+                        'PREÇO M²
+                        If Application.IfError(Application.Search("&lt;precom2&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºPREÇO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;precom2&gt;", ""), "&lt;/precom2&gt;", "")
+                            ºSH_BD.Range("J" & 2 + ºI).Value = ºPREÇO
+                        End If
+                    Next
+                Next
+            End If
+            
+            '------------------------------------------------------------------------------------------------------
+            '                                           PERFIL DE VENDA
+            '------------------------------------------------------------------------------------------------------
+            Dim ºN_Perfis As Double
+            Dim ºCOD_PERF, ºTX_JUR As Variant
+            ºN_Perfis = Application.CountIf(ºSH_IMP.Range("B:B"), "&lt;curimp_viabil_v3&gt;")
+            ºR_1 = 1
+            If ºN_Perfis > 0 Then
+                For ºI = 1 To ºN_Perfis
+                    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viabil_v3&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viabil_v3&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    For ºL = ºR_1 To ºR_2 Step 1
+                        'DESCRIÇÃO
+                        If Application.IfError(Application.Search("&lt;descricao&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºDESCRIÇÃO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;descricao&gt;", ""), "&lt;/descricao&gt;", "")
+                            ºSH_BD.Range("B" & 900 + ºI).Value = ºDESCRIÇÃO
+                        End If
+                        'CODIGO PERFIL
+                        If Application.IfError(Application.Search("&lt;tipo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºCOD_PERF = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tipo&gt;", ""), "&lt;/tipo&gt;", "")
+                            ºSH_BD.Range("A" & 900 + ºI).Value = ºI
+                        End If
+                        'ASSOCIATIVO
+                        If Application.IfError(Application.Search("&lt;cred_assoc&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºAsso = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;cred_assoc&gt;", ""), "&lt;/cred_assoc&gt;", "")
+                            ºSH_BD.Range("G" & 900 + ºI).Value = CBool(ºAsso)
+                        End If
+                        
+                        'TAXA JUROS
+                        If Application.IfError(Application.Search("&lt;jur_amort&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTX_JUR = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;jur_amort&gt;", ""), "&lt;/jur_amort&gt;", "")
+                            ºSH_BD.Range("F" & 900 + ºI).Value = Format((1 + Replace(ºTX_JUR, ".", ",") * 1 / 100) ^ 12 - 1, "0.00%")
+                        End If
+                    Next
+                Next
+            End If
+            
+            
+            '------------------------------------------------------------------------------------------------------
+            '                                           CURVAS DE VENDA
+            '------------------------------------------------------------------------------------------------------
+            Dim ºN_CURVAS, ºCURVAS_C As Double
+            Dim ºPRCT_UNID, ºTEMPO, ºINI_VND, ºCOD_PERF_V As Variant
+            ºN_CURVAS = Application.CountIf(ºSH_IMP.Range("B:B"), "&lt;curimp_viabil_v1&gt;")
+            ºN_TipoS = ºN_CURVAS
+            ReDim CÓDIGO_TPLG(ºN_TipoS, 2)
+            ºCURVAS_C = 0
+            ºCOD_PERF = 0
+            ºN = 0
+            Set ºSHT_TESTE = ThisWorkbook.Sheets.Add
+            If ºN_TipoS > 0 Then
+                ºR_1 = 1
+                For ºI = 1 To ºN_TipoS
+                    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viabil_v1&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viabil_v1&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    For ºL = ºR_1 To ºR_2 Step 1
+                        'CODIGO PERFIL
+                        If Application.IfError(Application.Search("&lt;tipo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºCOD_PERF_V = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tipo&gt;", ""), "&lt;/tipo&gt;", "")
+                            ºSHT_TESTE.Cells(ºI, 1).Value = ºCOD_PERF_V
+                        End If
+                        'DURAÇÃO
+                        If Application.IfError(Application.Search("&lt;parc&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTEMPO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;parc&gt;", ""), "&lt;/parc&gt;", "")
+                            ºSHT_TESTE.Cells(ºI, 2).Value = ºTEMPO
+                        End If
+                        'INICIO
+                        If Application.IfError(Application.Search("&lt;mes&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºINI_VND = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;mes&gt;", ""), "&lt;/mes&gt;", "")
+                            ºSHT_TESTE.Cells(ºI, 3).Value = ºINI_VND
+                        End If
+                        'PERCENTUAL
+                        If Application.IfError(Application.Search("&lt;valor&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºPRCT_UNID = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;valor&gt;", ""), "&lt;/valor&gt;", "")
+                            ºSHT_TESTE.Cells(ºI, 4).Value = ºPRCT_UNID
+                        End If
+                        'DESCRIÇÃO
+                        If Application.IfError(Application.Search("&lt;tipo_descr&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºDESCRIÇÃO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tipo_descr&gt;", ""), "&lt;/tipo_descr&gt;", "")
+                            ºSHT_TESTE.Cells(ºI, 5).Value = ºDESCRIÇÃO
+                        End If
+                        'FASE
+                        If Application.IfError(Application.Search("&lt;fase&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºFASE = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;fase&gt;", ""), "&lt;/fase&gt;", "")
+                            ºSHT_TESTE.Cells(ºI, 6).Value = ºFASE
+                        End If
+                    Next
+                    ºOK = True
+                    For ºG = 1 To ºN_CURVAS
+                        If CÓDIGO_TPLG(ºN, 2) = ºFASE & " " & ºDESCRIÇÃO Then
+                            ºOK = False
+                        End If
+                    Next
+                    If ºOK Then
+                        ºN = ºN + 1
+                        CÓDIGO_TPLG(ºN, 0) = ºFASE
+                        CÓDIGO_TPLG(ºN, 1) = ºCOD_PERF_V
+                        CÓDIGO_TPLG(ºN, 2) = ºFASE & " " & ºDESCRIÇÃO
+                    End If
+                Next
+                ºSHT_TESTE.UsedRange.RemoveDuplicates Array(1, 2, 3, 4, 6), False
+                If Application.Sum(ºSHT_TESTE.Range("d1:d" & ºSHT_TESTE.UsedRange.Rows.Count)) > 100 Then
+                    ºSHT_TESTE.UsedRange.RemoveDuplicates Array(1, 2, 3, 4), False
+                End If
+                ºN_TipoS = ºSHT_TESTE.UsedRange.Rows.Count
+                ºSHT_TESTE.Sort.SortFields.Clear
+                ºSHT_TESTE.Sort.SortFields.Add Key:=Range("C1:c" & ºN_TipoS), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+                ºSHT_TESTE.Sort.SetRange Range("A1:F" & ºN_TipoS)
+                ºSHT_TESTE.Sort.Apply
+                
+                
+                ºSHT_TESTE.Sort.SortFields.Clear
+                ºSHT_TESTE.Sort.SortFields.Add Key:=Range("A1:A" & ºN_TipoS), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+                With ºSHT_TESTE.Sort
+                    .SetRange Range("A1:F" & ºN_TipoS)
+                    .Header = xlGuess
+                    .MatchCase = False
+                    .Orientation = xlTopToBottom
+                    .SortMethod = xlPinYin
+                    .Apply
+                End With
+                For ºI = 1 To ºN_TipoS
+                    ºCOD_PERF_V = ºSHT_TESTE.Range("A" & ºI).Value
+                    If ºCOD_PERF <> ºCOD_PERF_V Then
+                        ºCURVAS_C = ºCURVAS_C + 1
+                        ºcoluna = 1
+                        ºCOD_PERF = ºCOD_PERF_V
+                        ºSH_BD.Cells(56 + ºCURVAS_C, 3 + ((ºcoluna - 1) * 3) + 1).Value = ºSHT_TESTE.Range("b" & ºI).Value
+                        ºSH_BD.Cells(56 + ºCURVAS_C, 3 + ((ºcoluna - 1) * 3) + 2).Value = ºSHT_TESTE.Range("c" & ºI).Value
+                        ºSH_BD.Cells(56 + ºCURVAS_C, 3 + ((ºcoluna - 1) * 3)).Value = Replace(ºSHT_TESTE.Range("d" & ºI).Value, ".", ",") * 1 / 100
+                        ºSH_BD.Range("C" & 900 + ºCURVAS_C).Value = ºCURVAS_C
+                        ºSH_BD.Range("I" & 900 + ºCURVAS_C).Value = ºCOD_PERF
+                        ºSH_BD.Range("B" & 56 + ºCURVAS_C).Value = ºCURVAS_C
+                    Else
+                        ºcoluna = ºcoluna + 1
+                        ºSH_BD.Cells(56 + ºCURVAS_C, 3 + ((ºcoluna - 1) * 3) + 1).Value = ºSHT_TESTE.Range("b" & ºI).Value
+                        ºSH_BD.Cells(56 + ºCURVAS_C, 3 + ((ºcoluna - 1) * 3) + 2).Value = ºSHT_TESTE.Range("c" & ºI).Value
+                        ºSH_BD.Cells(56 + ºCURVAS_C, 3 + ((ºcoluna - 1) * 3)).Value = Replace(ºSHT_TESTE.Range("d" & ºI).Value, ".", ",") * 1 / 100
+                    End If
+                Next
+            End If
+            For ºL = 3 To 32 Step 1
+                If ºSH_BD.Range("B" & ºL).Value Then
+                    ºOK = False
+                    For ºI = 1 To ºN_CURVAS Step 1
+                        If CÓDIGO_TPLG(ºI, 2) = ºSH_BD.Range("C" & ºL).Value & " " & ºSH_BD.Range("D" & ºL).Value Then
+                            ºR = Application.Match(CÓDIGO_TPLG(ºI, 1), ºSH_BD.Range("i901:i950"), 0)
+                            ºSH_BD.Range("N" & ºL).Value = ºR
+                            ºOK = True
+                            Exit For
+                        End If
+                    Next
+                    If Not ºOK Then
+                        ºSH_BD.Range("N" & ºL).Value = ºSH_BD.Range("C" & ºL).Value
+                    End If
+                End If
+            Next
+            ºSHT_TESTE.Delete
+            '------------------------------------------------------------------------------------------------------
+            '                                           TABELA DE VENDA
+            '------------------------------------------------------------------------------------------------------
+            Dim ºN_TABELAS, ºTABELA_L As Double
+            Dim ºPARCELAS, ºTIPO_P, ºCOD_PERF_T, ºINI_T, ºVLR_T, ºC_JUR, ºM_JUR, ºFX_INI, ºFX_FIM, ºFIM_T As Variant
+            ºN_TABELAS = Application.CountIf(ºSH_IMP.Range("B:B"), "&lt;curimp_viabil_v2&gt;")
+            ºR_1 = 1
+            ºTABELA_L = 1
+            ºCOD_PERF = ºSH_BD.Range("A" & 900 + ºTABELA_L).Value
+            ºcoluna = 0
+            
+            If ºN_TABELAS > 0 Then
+                ºCOD_PERF = CDbl(Replace(ºGET_COD_PERF_V(ºSH_IMP), "T", ""))
+                For ºI = 1 To ºN_TABELAS
+                    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viabil_v2&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viabil_v2&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    For ºL = ºR_1 To ºR_2 Step 1
+                        'CODIGO PERFIL
+                        If Application.IfError(Application.Search("&lt;tipo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºCOD_PERF_V = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tipo&gt;", ""), "&lt;/tipo&gt;", "")
+                            If ºCOD_PERF_V = "T" Then Exit For
+                            If ºCOD_PERF <> CDbl(Replace(ºCOD_PERF_V, "T", "")) Then
+                                ºCOD_PERF = CDbl(Replace(ºCOD_PERF_V, "T", ""))
+                                If Application.IfError(Application.Match("TABELA " & ºCOD_PERF, ºSH_BD.Range("B108:B156"), 0), 0) = 0 Then
+                                    ºTABELA_L = ºTABELA_L + 1
+                                    ºcoluna = 1
+                                Else
+                                    ºTABELA_L = Application.IfError(Application.Match("TABELA " & ºCOD_PERF, ºSH_BD.Range("B108:B156"), 0), 0)
+                                    ºcoluna = ((ºSH_BD.Cells(ºTABELA_L + 107, Columns.Count).End(xlToLeft).Column - 2) / 9) + 1
+                                End If
+                            Else
+                                ºcoluna = ºcoluna + 1
+                            End If
+                            ºSH_BD.Range("D" & 900 + ºTABELA_L).Value = ºTABELA_L & " | TABELA " & ºCOD_PERF
+                            ºSH_BD.Range("E" & 900 + ºTABELA_L).Value = ºTABELA_L & " | TABELA " & ºCOD_PERF
+                            ºSH_BD.Range("B" & 107 + ºTABELA_L).Value = "TABELA " & ºCOD_PERF
+                            ºSH_BD.Range("A" & 107 + ºTABELA_L).Value = 100
+                        End If
+                        'TIPO
+                        If Application.IfError(Application.Search("&lt;periodo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTIPO_P = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;periodo&gt;", ""), "&lt;/periodo&gt;", "")
+                            If ºTIPO_P = 97 Then
+                                ºTIPO_P = 10
+                            ElseIf ºTIPO_P = 99 Then
+                                ºTIPO_P = 8
+                            ElseIf ºTIPO_P = 12 Then
+                                ºTIPO_P = 6
+                            ElseIf ºTIPO_P = 98 Then
+                                ºTIPO_P = 9
+                            ElseIf ºTIPO_P = 98 Then
+                                ºTIPO_P = 9
+                            End If
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9)).Value = ºTIPO_P
+                        End If
+                        'PARCELAS
+                        If Application.IfError(Application.Search("&lt;parc&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºPARCELAS = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;parc&gt;", ""), "&lt;/parc&gt;", "")
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9) + 1).Value = ºPARCELAS
+                        End If
+                        'INICIO
+                        If Application.IfError(Application.Search("&lt;mes&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºINI_T = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;mes&gt;", ""), "&lt;/mes&gt;", "")
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9) + 2).Value = ºINI_T
+                        End If
+                        '% DO VGV
+                        If Application.IfError(Application.Search("&lt;valor&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºPRCT_UNID = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;valor&gt;", ""), "&lt;/valor&gt;", "")
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9) + 3).Value = Replace(ºPRCT_UNID, ".", ",") * 1 / 100
+                        End If
+                        'COBRAR JUROS ?
+                        If Application.IfError(Application.Search("&lt;tp&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºC_JUR = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tp&gt;", ""), "&lt;/tp&gt;", "")
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9) + 4).Value = Abs(CBool(ºC_JUR) * 1)
+                        End If
+                        'INICIO JUROS
+                        If Application.IfError(Application.Search("&lt;mestp&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºM_JUR = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;mestp&gt;", ""), "&lt;/mestp&gt;", "")
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9) + 5).Value = ºM_JUR
+                        End If
+                        'FIXAR INICIO
+                        If Application.IfError(Application.Search("&lt;fixa&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºFX_INI = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;fixa&gt;", ""), "&lt;/fixa&gt;", "")
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9) + 6).Value = Abs(CBool(ºFX_INI) * 1)
+                        End If
+                        'FIXAR TERMINO
+                        If Application.IfError(Application.Search("&lt;comprime&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºFX_FIM = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;comprime&gt;", ""), "&lt;/comprime&gt;", "")
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9) + 7).Value = Abs(CBool(ºFX_FIM) * 1)
+                        End If
+                        'TERMINO
+                        If Application.IfError(Application.Search("&lt;mesfim&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºFIM_T = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;mesfim&gt;", ""), "&lt;/mesfim&gt;", "")
+                            ºSH_BD.Cells(107 + ºTABELA_L, 3 + ((ºcoluna - 1) * 9) + 8).Value = ºFIM_T
+                        End If
+                    Next
+                Next
+            End If
+            
+            '------------------------------------------------------------------------------------------------------
+            '                                           TERRENO
+            '------------------------------------------------------------------------------------------------------
+            Dim ºAREA_T, ºVALOR_M_Tº, PERMUTA_FIN, ºITBI, ºMES_ITBI, ºT_PERMUTADO As Variant
+        
+            For ºL = 1 To ºSH_IMP.UsedRange.Rows.Count Step 1
+                If ºSH_IMP.Range("C" & ºL) <> "" Then
+                    'ÁREA TERRENO
+                    If Application.IfError(Application.Search("&lt;area_terr&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºAREA_T = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;area_terr&gt;", ""), "&lt;/area_terr&gt;", "")
+                        ºSH_BD.Range("C462").Value = Replace(ºAREA_T, ".", ",") * 1
+                    End If
+                    '% PERMUTADO
+                    If Application.IfError(Application.Search("&lt;perpermuta&gt", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºT_PERMUTADO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;perpermuta&gt;", ""), "&lt;/perpermuta&gt;", "")
+                        ºSH_BD.Range("C463").Value = Format(Replace(ºT_PERMUTADO, ".", ",") * 1 / 100, "0.00000%")
+                    End If
+                    'PERMUTA FINANCEIRA
+                    If Application.IfError(Application.Search("&lt;perm_vgv&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        PERMUTA_FIN = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;perm_vgv&gt;", ""), "&lt;/perm_vgv&gt;", "")
+                        ºSH_BD.Range("C464").Value = Format(Replace(PERMUTA_FIN, ".", ",") * 1 / 100, "0.00000%")
+                    End If
+                    'VGV TERRENO
+                    If Application.IfError(Application.Search("&lt;terr_m2&gt", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºVALOR_M_Tº = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;terr_m2&gt;", ""), "&lt;/terr_m2&gt;", "")
+                        ºSH_BD.Range("C465").Value = Format(Replace(ºVALOR_M_Tº, ".", ",") * Replace(ºAREA_T, ".", ","), "#,##0.00000")
+                    End If
+                    'ALIQUOTA ITBI
+                    If Application.IfError(Application.Search("&lt;tx_itbi&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºITBI = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tx_itbi&gt;", ""), "&lt;/tx_itbi&gt;", "")
+                        ºSH_BD.Range("C469").Value = Format(Replace(ºITBI, ".", ",") * 1 / 100, "0.00%")
+                    End If
+                    'MES ITBI
+                    If Application.IfError(Application.Search("&lt;mes_itbi&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºMES_ITBI = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;mes_itbi&gt;", ""), "&lt;/mes_itbi&gt;", "")
+                        If Left(ºMES_ITBI, 2) <> "ev" Then
+                            ºSH_BD.Range("C470").Value = ºMES_ITBI
+                        End If
+                    End If
+                End If
+            Next
+            ºSH_BD.Range("C467").Value = 0
+            ºSH_BD.Range("C468").Value = 0
+            ºSH_BD.Range("C466").Value = Format(Application.SumProduct(ºSH_BD.Range("F3:F33"), ºSH_BD.Range("G3:G33"), ºSH_BD.Range("J3:J33")) + Application.SumProduct(ºSH_BD.Range("F3:F33"), ºSH_BD.Range("G3:G33"), ºSH_BD.Range("H3:H33"), ºSH_BD.Range("I3:I33"), ºSH_BD.Range("J3:J33")), "#,##0.00000")
+            '------------------------------------------------------------------------------------------------------
+            '                                           TAXAS
+            '------------------------------------------------------------------------------------------------------
+            Dim ºADM_C, ºCMM_DIR, ºCMM_IND, ºTX_MKT, ºTX_RET, ºTX_PIS, ºTX_VP As Variant
+            
+            ºSH_BD.Range("C159").Value = "VIABIL 1"
+            For ºL = 1 To ºSH_IMP.UsedRange.Rows.Count Step 1
+                If ºSH_IMP.Range("C" & ºL) <> "" Then
+                    'ADM CARTEIRA
+                    If Application.IfError(Application.Search("&lt;tx_adm_car&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºADM_C = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tx_adm_car&gt;", ""), "&lt;/tx_adm_car&gt;", "")
+                        ºSH_BD.Range("S159").Value = Format(Replace(ºADM_C, ".", ",") * 1 / 100, "0.00%")
+                    End If
+                    'COMISSÃO DIRETA
+                    If Application.IfError(Application.Search("&lt;desp_diret&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºCMM_DIR = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;desp_diret&gt;", ""), "&lt;/desp_diret&gt;", "")
+                        ºSH_BD.Range("I159").Value = Format(Replace(ºCMM_DIR, ".", ",") * 1 / 100, "0.00%")
+                    End If
+                    'COMISSÃO INDIRETA
+                    If Application.IfError(Application.Search("&lt;desp_vend&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºCMM_IND = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;desp_vend&gt;", ""), "&lt;/desp_vend&gt;", "")
+                        ºSH_BD.Range("H159").Value = Format(Replace(ºCMM_IND, ".", ",") * 1 / 100, "0.00%")
+                    End If
+                    'PROPAGANDA
+                    If Application.IfError(Application.Search("&lt;propaganda&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºTX_MKT = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;propaganda&gt;", ""), "&lt;/propaganda&gt;", "")
+                        ºSH_BD.Range("J159").Value = Format(Replace(ºTX_MKT, ".", ",") * 1 / 100, "0.00%")
+                    End If
+                    'IMPOSTO
+                    If Application.IfError(Application.Search("&lt;ret&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºTX_RET = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;ret&gt;", ""), "&lt;/ret&gt;", "")
+                    End If
+                    If Application.IfError(Application.Search("&lt;pis&gt", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºTX_PIS = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;pis&gt;", ""), "&lt;/pis&gt;", "")
+                    End If
+                    'DESCONTO VP
+                    If Application.IfError(Application.Search("&lt;jur_vp&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºTX_VP = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;jur_vp&gt;", ""), "&lt;/jur_vp&gt;", "")
+                        ºSH_BD.Range("R159").Value = Format(Replace(ºTX_VP, ".", ",") * 1 / 100, "0.00%")
+                    End If
+                End If
+            Next
+            'IMPOSTO
+            If Replace(ºTX_RET, ".", ",") * 1 / 100 <> 0 Then
+                ºSH_BD.Range("D159").Value = "RET"
+                ºSH_BD.Range("E159").Value = Format(Replace(ºTX_RET, ".", ",") * 1 / 100, "0.00%")
+            Else
+                ºSH_BD.Range("D159").Value = "RET"
+                ºSH_BD.Range("E159").Value = Format(Replace(ºTX_PIS, ".", ",") * 1 / 100, "0.00%")
+            End If
+             ºSH_BD.Range("K159").Value = Format(0, "0.00%")
+             ºSH_BD.Range("l159").Value = Format(0, "0.00%")
+            '------------------------------------------------------------------------------------------------------
+            '                                           COMENTÁRIO
+            '------------------------------------------------------------------------------------------------------
+             ºOK = False
+            For ºL = 1 To ºSH_IMP.UsedRange.Rows.Count Step 1
+                If ºSH_IMP.Range("C" & ºL) <> "" Or ºSH_IMP.Range("A" & ºL) <> "" Then
+                    If Application.IfError(Application.Search("&lt;obsinfo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºOK = True
+                        ºSH_BD.Range("C898").Value = Replace(ºSH_IMP.Range("C" & ºL).Value, "&lt;obsinfo&gt;", "") & vbLf
+                        If Application.IfError(Application.Search("&lt;/obsinfo&gt;", ºSH_BD.Range("C898").Value), 0) <> 0 Then
+                            ºSH_BD.Range("C898").Value = Replace(ºSH_BD.Range("C898").Value, "&lt;/obsinfo&gt;", "")
+                            Exit For
+                        End If
+                    ElseIf Application.IfError(Application.Search("&lt;/obsinfo&gt;", ºSH_IMP.Range("A" & ºL).Value), 0) <> 0 Then
+                        Exit For
+                    ElseIf ºOK Then
+                        ºSH_BD.Range("C898").Value = ºSH_BD.Range("C898").Value & ºSH_IMP.Range("A" & ºL).Value & vbLf
+                    End If
+                End If
+            Next
+            '------------------------------------------------------------------------------------------------------
+            '                                           OBRA
+            '------------------------------------------------------------------------------------------------------
+            Dim ºN_OBRA As Double
+            Dim ºA_CONS, ºC_CONS, ºTX_ADM_O, ºTX_ADM_E, ºCURVA_O, ºCURVA_O_2, ºINI_OBRA As Variant
+            ºN_OBRA = Application.CountIf(ºSH_IMP.Range("B:B"), "&lt;curimp_viab_obra&gt;")
+            ºR_1 = 1
+            If ºN_OBRA > 0 Then
+                For ºN = 1 To ºN_OBRA
+                    ºT_area_pvt = 0
+                    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viab_obra&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viab_obra&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    'AREA CONSTRUIDA
+                    For ºL = ºR_1 To ºR_2 Step 1
+                        If Application.IfError(Application.Search("&lt;fase&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºFASE = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;fase&gt;", ""), "&lt;/fase&gt;", "")
+                            ºI = ºFASE
+                        End If
+                    Next
+                    
+                    For ºL = ºR_1 To ºR_2 Step 1
+                        'FASE
+                        ºSH_BD.Range("B" & 209 + ºI).Value = ºI
+                        'DESCRIÇÃO
+                        If Application.IfError(Application.Search("&lt;descricao&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºDESCRIÇÃO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;descricao&gt;", ""), "&lt;/descricao&gt;", "")
+                        End If
+                        'AREA CONSTRUIDA
+                        If Application.IfError(Application.Search("&lt;area_c&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºA_CONS = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;area_c&gt;", ""), "&lt;/area_c&gt;", "")
+                        End If
+                        'CUSTO M² CONSTRUIDO
+                        If Application.IfError(Application.Search("&lt;custo_m2&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºC_CONS = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;custo_m2&gt;", ""), "&lt;/custo_m2&gt;", "")
+                        End If
+                        'TAXA ADMINISTRAÇÃO
+                        If Application.IfError(Application.Search("&lt;cur_per_ad&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTX_ADM_O = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;cur_per_ad&gt;", ""), "&lt;/cur_per_ad&gt;", "")
+                            'CALCULO CUSTO M² COM TAXAS
+                            a = CDbl(Replace(ºC_CONS, ".", ","))
+                            B = CDbl(Replace(ºA_CONS, ".", ","))
+                            C = a * B
+                            D = C * (Replace(ºTX_ADM_O, ".", ",") * 1 / 100)
+                            E = (C + D) * (Replace(ºTX_ADM_E, ".", ",") * 1 / 100)
+                            ºCUSTO_T = C + D + E + ºSH_BD.Range("S" & 209 + ºI).Value
+                        End If
+                        'TAXA ADMINISTRAÇÃO EFETIVA
+                        If Application.IfError(Application.Search("&lt;cur_per_ev&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTX_ADM_E = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;cur_per_ev&gt;", ""), "&lt;/cur_per_ev&gt;", "")
+                        End If
+                        'INICIO OBRA
+                        If Application.IfError(Application.Search("&lt;mes_ini&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºINI_OBRA = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;mes_ini&gt;", ""), "&lt;/mes_ini&gt;", "")
+                        End If
+                        If ºINI_OBRA <> "-1" And Application.IfError(Application.Search("ncorrido", ºDESCRIÇÃO), 0) = 0 Then
+                            'CURVA DE OBRA
+                            If Application.IfError(Application.Search("&lt;curva&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                                ºCURVA_O = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;curva&gt;", ""), "&lt;/curva&gt;", "")
+                                ºCURVA_O_2 = Right(ºCURVA_O, Len(ºCURVA_O) - 1)
+                                ºSH_BD.Range("L" & 209 + ºI).Value = Len(ºCURVA_O) - Len(Replace(ºCURVA_O, "+", ""))
+                                For ºC = 1 To Len(ºCURVA_O) - Len(Replace(ºCURVA_O, "+", ""))
+                                    ºSH_BD.Cells(261 + ºC, 1 + ºI).Value = Replace(Left(ºCURVA_O_2, Application.IfError(Application.Search("+", ºCURVA_O_2), Len(ºCURVA_O_2) + 1) - 1), ".", ",") * 1 / 100
+                                    If Application.IfError(Application.Search("+", ºCURVA_O_2), 0) <> 0 Then
+                                        ºCURVA_O_2 = Right(ºCURVA_O_2, Len(ºCURVA_O_2) - Application.Search("+", ºCURVA_O_2))
+                                    End If
+                                Next
+                            End If
+                        End If
+                    Next
+                    If ºINI_OBRA = "-1" Or Application.IfError(Application.Search("ncorrido", ºDESCRIÇÃO), 0) <> 0 Then
+                        ºSH_BD.Range("S" & 209 + ºI).Value = ºCUSTO_T
+                    Else
+                        ºSH_BD.Range("C" & 209 + ºI).Value = ºI
+                        ºSH_BD.Cells(260, 1 + ºI).Value = ºDESCRIÇÃO
+                        ºSH_BD.Range("D" & 209 + ºI).Value = ºA_CONS
+                        ºSH_BD.Range("H" & 209 + ºI).Value = Format(Replace(ºTX_ADM_O, ".", ",") * 1 / 100, "0.00%")
+                        ºSH_BD.Range("F" & 209 + ºI).Value = ºCUSTO_T / B
+                        ºSH_BD.Range("I" & 209 + ºI).Value = Format(Replace(ºTX_ADM_E, ".", ",") * 1 / 100, "0.00%")
+                        ºSH_BD.Range("K" & 209 + ºI).Value = ºINI_OBRA
+                        'ºSH_BD.Cells(261, 1 + ºI).Value = ºINI_OBRA
+                        For ºC = 3 To 33
+                            If ºSH_BD.Range("C" & ºC).Value = ºI Then
+                                'UNIDADES
+                                a = ºSH_BD.Range("E" & ºC).Value
+                                'AREA COBERTA
+                                C = ºSH_BD.Range("G" & ºC).Value
+                                'AREA DESCOBERTA
+                                D = ºSH_BD.Range("H" & ºC).Value
+                                ºSH_BD.Range("c" & 497 + ºI).Value = ºSH_BD.Range("c" & 497 + ºI).Value + ((a - B) * C)
+                                ºSH_BD.Range("D" & 497 + ºI).Value = ºSH_BD.Range("D" & 497 + ºI).Value + ((a - B) * D)
+                                ºSH_BD.Range("e" & 497 + ºI).Value = ºSH_BD.Range("e" & 497 + ºI).Value + ((B) * (C + D))
+                                ºT_area_pvt = ºT_area_pvt + (a * (C + D))
+                            End If
+                        Next
+                        ºSH_BD.Range("E" & 209 + ºI).Value = ºT_area_pvt
+                        ºSH_BD.Range("G" & 209 + ºI).Value = ºCUSTO_T / ºT_area_pvt
+                        ºSH_BD.Range("N" & 209 + ºI).Value = ºCUSTO_T
+                        ºSH_BD.Range("j" & 209 + ºI).Value = 0
+                        ºSH_BD.Range("O" & 209 + ºI).FormulaR1C1 = "=(((RC[-1]+RC[4])*R1C17)/(SUMPRODUCT(RC[-7]:RC[-5]*1)+1))-RC[4]"
+                    End If
+                Next
+            End If
+            '------------------------------------------------------------------------------------------------------
+            '                                           MCMV
+            '------------------------------------------------------------------------------------------------------
+            Dim ºMCMV As Double
+            Dim ºVALOR_T_MCMV, ºTAO, ºTX_DEFLA, ºPZ_LB, ºPZ_DOC, ºPZ_ULT As Variant
+            For ºL = 1 To ºSH_IMP.UsedRange.Rows.Count Step 1
+                If ºSH_IMP.Range("C" & ºL) <> "" Then
+                    'VGV TERRENO
+                    If Application.IfError(Application.Search("&lt;terr_mcmv&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                        ºVALOR_T_MCMV = ºVALOR_T_MCMV + CDbl(Replace(Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;terr_mcmv&gt;", ""), "&lt;/terr_mcmv&gt;", ""), ".", ","))
+                    End If
+                End If
+            Next
+            
+            ºMCMV = Application.CountIf(ºSH_IMP.Range("B:B"), "&lt;curimp_viab_cred&gt;")
+            ºR_1 = 1
+            If ºMCMV > 0 Then
+                For ºI = 1 To ºMCMV
+                    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viab_cred&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viab_cred&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    For ºL = ºR_1 To ºR_2 Step 1
+                        '% DO VGV
+                        If Application.IfError(Application.Search("&lt;perc_vgv&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            PRTC_VGV = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;perc_vgv&gt;", ""), "&lt;/perc_vgv&gt;", "")
+                            If Replace(PRTC_VGV, ".", ",") * 1 / 100 = 0 Then
+                                ºSH_BD.Range("B480").Value = False
+                                Exit For
+                            Else
+                                ºSH_BD.Range("B480").Value = True
+                                ºSH_BD.Range("C489").Value = Format(ºVALOR_T_MCMV, "#,##0.00")
+                            End If
+                        End If
+                        'TAO
+                        If Application.IfError(Application.Search("&lt;tao&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTAO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;tao&gt;", ""), "&lt;/tao&gt;", "")
+                            ºSH_BD.Range("C481").Value = ºTAO
+                        End If
+                        'TAXA DE DEFLAÇÃO
+                        If Application.IfError(Application.Search("&lt;deflacao&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTX_DEFLA = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;deflacao&gt;", ""), "&lt;/deflacao&gt;", "")
+                            ºSH_BD.Range("C482").Value = Format(Replace(ºTX_DEFLA, ".", ",") * 1 / 100, "0.00%")
+                        End If
+                        'PRAZO LIBERAÇÃO
+                        If Application.IfError(Application.Search("&lt;carencia&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºPZ_LB = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;carencia&gt;", ""), "&lt;/carencia&gt;", "")
+                            ºSH_BD.Range("C486").Value = ºPZ_LB
+                        End If
+                        'PRAZO ULTIMA
+                        If Application.IfError(Application.Search("&lt;prazo_ult&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºPZ_ULT = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;prazo_ult&gt;", ""), "&lt;/prazo_ult&gt;", "")
+                            ºSH_BD.Range("C487").Value = ºPZ_ULT
+                        End If
+                        'PRAZO DOCUMENTAÇÃO
+                        If Application.IfError(Application.Search("&lt;prazo_rep&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºPZ_DOC = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;prazo_rep&gt;", ""), "&lt;/prazo_rep&gt;", "")
+                            ºSH_BD.Range("C488").Value = ºPZ_DOC
+                        End If
+                    Next
+                    ºSH_BD.Range("C483").Value = 0
+                    ºSH_BD.Range("C484").Value = 0
+                    ºSH_BD.Range("C485").Value = 0
+                Next
+            End If
+            ºSH_BD.Range("C490").Value = "Primeira Venda"
+            '------------------------------------------------------------------------------------------------------
+            '                                           LANÇAMENTOS
+            '------------------------------------------------------------------------------------------------------
+            Dim ºN_LCTO As Double
+            Dim ºF_LCTO, ºTP_LCTO, ºN_PARCL, ºTP_PARCELA, ºINICIO_L, ºVALOR_LCTO, ºCURVA_LCTO, ºCURVA_LCTO_2, ºGRUPO, ºVLR_PREMIO As Variant
+            ºN_LCTO = Application.CountIf(ºSH_IMP.Range("B:B"), "&lt;curimp_viab_lanc&gt;")
+            ºR_1 = 1
+            Set ºSH_BD = ThisWorkbook.Sheets("lançamentos")
+            ºSH_BD.Unprotect "moranga13"
+            If ºN_LCTO > 0 Then
+                'PREMIO
+                For ºI = 1 To ºN_LCTO
+                    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viab_lanc&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viab_lanc&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    For ºC = ºR_1 To ºR_2 Step 1
+                        'TIPO LANÇAMENTO
+                        If Application.IfError(Application.Search("&lt;descricao&gt;", ºSH_IMP.Range("C" & ºC).Value), 0) <> 0 Then
+                            ºTP_LCTO = Replace(Replace(ºSH_IMP.Range("C" & ºC), "&lt;descricao&gt;", ""), "&lt;/descricao&gt;", "")
+                            If (Application.IfError(Application.Search("Prêmio", ºTP_LCTO), 0) = 0 And Application.IfError(Application.Search("Premio", ºTP_LCTO), 0) = 0) Or Application.IfError(Application.Search("Comissão", ºTP_LCTO), 0) = 0 Then
+                                Exit For
+                            End If
+                        End If
+                        'VALOR
+                        If Application.IfError(Application.Search("&lt;valor&gt;", ºSH_IMP.Range("C" & ºC).Value), 0) <> 0 Then
+                            ºVALOR_LCTO = Replace(Replace(ºSH_IMP.Range("C" & ºC), "&lt;valor&gt;", ""), "&lt;/valor&gt;", "")
+                            ºVLR_PREMIO = ºVLR_PREMIO + (Replace(ºVALOR_LCTO, ".", ",") * 1)
+                        End If
+                    Next
+                Next
+                ThisWorkbook.Sheets("BD_CAD_VND").Range("M159").Value = Format(ºVLR_PREMIO / 100, "0.00%")
+                
+                ºR_1 = 1
+                For ºI = 1 To ºN_LCTO
+                    ºR_1 = Application.IfError(Application.Match("&lt;curimp_viab_lanc&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºR_2 = Application.IfError(Application.Match("&lt;/curimp_viab_lanc&gt;", ºSH_IMP.Range("B" & ºR_1 + 1 & ":B" & Rows.Count), 0), 0) + ºR_1
+                    ºSH_BD.Range("J" & 1 + ºI).Value = False
+                    For ºL = ºR_1 To ºR_2 Step 1
+                        'FASE
+                        If Application.IfError(Application.Search("&lt;fase&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºF_LCTO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;fase&gt;", ""), "&lt;/fase&gt;", "")
+                            ºSH_BD.Range("A" & 1 + ºI).Value = ºF_LCTO
+                        End If
+                        'GRUPO
+                        If Application.IfError(Application.Search("&lt;grupo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºGRUPO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;grupo&gt;", ""), "&lt;/grupo&gt;", "")
+                        End If
+                        'TIPO LANÇAMENTO
+                        If Application.IfError(Application.Search("&lt;descricao&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTP_LCTO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;descricao&gt;", ""), "&lt;/descricao&gt;", "")
+                            DeParaLcto ºTP_LCTO, CStr(ºGRUPO), ºI, CDbl(ºL), CStr(ºSH_IMP.Name)
+                        End If
+                        'PARCELAS
+                        If Application.IfError(Application.Search("&lt;parc&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºN_PARCL = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;parc&gt;", ""), "&lt;/parc&gt;", "")
+                            ºSH_BD.Range("E" & 1 + ºI).Value = ºN_PARCL
+                        End If
+                        'PERIODICIDADE
+                        If Application.IfError(Application.Search("&lt;periodo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºTP_PARCELA = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;periodo&gt;", ""), "&lt;/periodo&gt;", "")
+                            If ºTP_PARCELA = 1 Then
+                                ºTP_PARCELA = "Mensal"
+                            ElseIf ºTP_PARCELA = 6 Then
+                                ºTP_PARCELA = "Semestral"
+                            ElseIf ºTP_PARCELA = 12 Then
+                                ºTP_PARCELA = "Anual"
+                            End If
+                            ºSH_BD.Range("F" & 1 + ºI).Value = ºTP_PARCELA
+                        End If
+                        'INICIO
+                        If Application.IfError(Application.Search("&lt;mes&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºINICIO_L = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;mes&gt;", ""), "&lt;/mes&gt;", "")
+                            For ºN = ºR_1 To ºR_2 Step 1
+                                If Application.IfError(Application.Search("&lt;prazo_ini&gt;", ºSH_IMP.Range("C" & ºN).Value), 0) <> 0 Then
+                                    ºINICIO_L = CDbl(ºINICIO_L) + CDbl(Replace(Replace(ºSH_IMP.Range("C" & ºN), "&lt;prazo_ini&gt;", ""), "&lt;/prazo_ini&gt;", ""))
+                                End If
+                            Next
+                            ºSH_BD.Range("G" & 1 + ºI).Value = ºINICIO_L
+                        End If
+                        'VALOR
+                        If Application.IfError(Application.Search("&lt;valor&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            If (Application.IfError(Application.Search("Prêmio", ºTP_LCTO), 0) = 0 And Application.IfError(Application.Search("Premio", ºTP_LCTO), 0) = 0) Or Application.IfError(Application.Search("Comissão", ºTP_LCTO), 0) = 0 Then
+                                If ºGRUPO = "desp_fin" Or ((Application.IfError(Application.Search("Pagamento", ºTP_LCTO), 0) <> 0 Or Application.IfError(Application.Search("Comissão", ºTP_LCTO), 0) Or Application.IfError(Application.Search("Comissao", ºTP_LCTO), 0)) And Application.IfError(Application.Search("Terreno", ºTP_LCTO), 0) <> 0) Or Application.IfError(Application.Search("Permuta", ºTP_LCTO), 0) <> 0 _
+                                    Or Application.IfError(Application.Search("permfis", ºTP_LCTO), 0) <> 0 Or ºTP_LCTO = "Terreno (%)" Or ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE PROPAGANDA (R$)" Then
+                                    ºVALOR_LCTO = Replace(Replace(ºSH_IMP.Range("C" & ºL + 1), "&lt;valortot&gt;", ""), "&lt;/valortot&gt;", "")
+                                Else
+                                    ºVALOR_LCTO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;valor&gt;", ""), "&lt;/valor&gt;", "")
+                                End If
+                                If Application.IfError(Application.Search("OUTRAS RECEITAS", ºSH_BD.Range("B" & 1 + ºI).Value), 0) <> 0 Then
+                                    ºSH_BD.Range("I" & 1 + ºI).Value = Replace(ºVALOR_LCTO, ".", ",") * -1
+                                Else
+                                    ºSH_BD.Range("I" & 1 + ºI).Value = Replace(ºVALOR_LCTO, ".", ",") * 1
+                                End If
+                            Else
+                                ºVALOR_LCTO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;valor&gt;", ""), "&lt;/valor&gt;", "")
+                                If ºVLR_PREMIO <> 0 Then
+                                    ºVALOR_LCTO = (Replace(ºVALOR_LCTO, ".", ",") * 1) / ºVLR_PREMIO
+                                    If Application.IfError(Application.Search("OUTRAS RECEITAS", ºSH_BD.Range("B" & 1 + ºI).Value), 0) <> 0 Then
+                                        ºSH_BD.Range("I" & 1 + ºI).Value = ºVALOR_LCTO * -100
+                                    Else
+                                        ºSH_BD.Range("I" & 1 + ºI).Value = ºVALOR_LCTO * 100
+                                    End If
+                                Else
+                                    ºSH_BD.Range("I" & 1 + ºI).Value = 0
+                                End If
+                            End If
+                        End If
+                        'CURVA
+                        If ºN_PARCL > 1 Then
+                            If Application.IfError(Application.Search("&lt;curva&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                                ºCURVA_LCTO = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;curva&gt;", ""), "&lt;/curva&gt;", "")
+                                ºCURVA_LCTO_2 = Right(ºCURVA_LCTO, Len(ºCURVA_LCTO) - 1)
+                                ºSH_BD.Range("J" & 1 + ºI).Value = True
+                                For ºC = 1 To Len(ºCURVA_LCTO) - Len(Replace(ºCURVA_LCTO, "+", ""))
+                                    ºSH_BD.Cells(1 + ºI, 10 + ºC).NumberFormat = "0.00%"
+                                    ºSH_BD.Cells(1 + ºI, 10 + ºC).Value = Replace(Left(ºCURVA_LCTO_2, Application.IfError(Application.Search("+", ºCURVA_LCTO_2), Len(ºCURVA_LCTO_2) + 1) - 1), ".", ",") * 1 / 100
+                                    If Application.IfError(Application.Search("+", ºCURVA_LCTO_2), 0) <> 0 Then
+                                        ºCURVA_LCTO_2 = Right(ºCURVA_LCTO_2, Len(ºCURVA_LCTO_2) - Application.Search("+", ºCURVA_LCTO_2))
+                                    End If
+                                Next
+                            End If
+                        End If
+                        'COMENTARIO
+                        If Application.IfError(Application.Search("&lt;obs&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
+                            ºCOMENT = Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;obs&gt;", ""), "&lt;/obs&gt;", "")
+                            ºSH_BD.Range("DI" & 1 + ºI).Value = ºCOMENT
+                        End If
+                        
+                    Next
+                    If ºSH_BD.Range("F" & 1 + ºI).Value = "" Then ºSH_BD.Range("F" & 1 + ºI).Value = "Mensal"
+                Next
+            End If
+            ºSH_IMP.Delete
+        End If
+        ºARQUIVO = Replace(ºDIRETORIO, "\BD", "") & "\CONFIGURAÇÕES\Tony Stark.vcwbd"
+        Workbooks.Open ºARQUIVO, False, True, , "wmscyrela2017!,!,"
+        Set F_SHT = Workbooks("Tony Stark.vcwbd").Sheets("BD_LANÇAMENTOS")
+        Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+        D_SHT.Range("B581:D880").ClearContents
+        Lº = F_SHT.Cells(Rows.Count, 1).End(xlUp).Row
+        F_SHT.Range("A2:C" & Lº).Copy
+        D_SHT.Range("B581").PasteSpecial (xlPasteValues)
+        Application.CutCopyMode = False
+        Workbooks("Tony Stark.vcwbd").Close , False
+        
+        If Criar_Tabela <> "erro" And CurvaRec <> "erro" Then Call gerar_fluxo
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AG36").GoalSeek goal:=0, changingcell:=Sheets("BD_CAD_VND").Range("O1")
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AG38").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("I7").Value * ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value
+        If ThisWorkbook.Sheets("Capa Viabilidade").Range("AG38").Value > 0 Then
+            ThisWorkbook.Sheets("Capa Viabilidade").Range("AG36").GoalSeek goal:=0.165, changingcell:=Sheets("BD_CAD_VND").Range("O1")
+            ThisWorkbook.Sheets("Capa Viabilidade").Range("AG39").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("I7").Value * ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value
+        Else
+            ThisWorkbook.Sheets("Capa Viabilidade").Range("AG38").Value = 0
+            ThisWorkbook.Sheets("Capa Viabilidade").Range("AG39").Value = 0
+        End If
+        ThisWorkbook.Sheets("BD_CAD_VND").Range("Q1").Value = 1
+        ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value = 1
+        DoEvents
+        Calculate
+        Call CALCULAR_INFO_CAPA
+        Call SALVAR
+        Call ATT_INFO_GUI
+        Call A_CadastroUnidades
+    End If
+    Application.DisplayAlerts = True
+End Sub
+Sub ATT_INFO_GUI()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Dim ºExcel As Object
+    Set ºExcel = GetObject(ThisWorkbook.Sheets("BD_APOIO").Range("K14").Value)
+    With ºExcel
+        'COD EMP
+        ºExcel.Parent.Run "'" & ºExcel.Name & "'!ºCODIGO_EMP", ºCODIGO_EMP("")
+        'EMP
+        ºExcel.Parent.Run "'" & ºExcel.Name & "'!ºNOME_EMP", ºNOME_EMP("")
+        'COD VERSAO
+        ºExcel.Parent.Run "'" & ºExcel.Name & "'!ºCOD_VERSÃO", ºCOD_VERSÃO("")
+        'VERSÃO
+        ºExcel.Parent.Run "'" & ºExcel.Name & "'!ºNOME_VERSÃO", ºNOME_VERSÃO("")
+    End With
+End Sub
+
+Sub Exportar()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim ºExport As Workbook
+    Dim ºWB As Object
+    Set ºWB = GetObject(LOC_BASE)
+    ºNome = ºCODIGO_EMP("") & "-" & ºCOD_VERSÃO("") & " " & ºNOME_EMP("") & " " & ºNOME_VERSÃO("")
+    ºNome = Replace(Replace(Replace(Replace(Replace(Replace(Replace(Replace(Replace(ºNome, "/", ""), "\", ""), ":", ""), "*", ""), "?", ""), """", ""), "<", ""), ">", ""), "|", "")
+    ºnome_v = ºNome
+    Do Until Dir(ºWB.Path & "\" & ºNome & ºN) = ""
+        ºN = ºN + 1
+    Loop
+    Worksheets(Array("BD_CAD_VND", "Lançamentos")).Copy
+    Set ºExport = ActiveWorkbook
+    ºExport.Worksheets("BD_CAD_VND").UsedRange.Value = ºExport.Worksheets("BD_CAD_VND").UsedRange.Value
+    ºExport.Worksheets("BD_CAD_VND").Range("B1").Value = ºNOME_VERSÃO("")
+    ºExport.Worksheets("BD_CAD_VND").Range("C1").Value = ºDATA_BASE("")
+    ºExport.Worksheets("BD_CAD_VND").Range("D1").Value = ºNOME_EMP("")
+    ºExport.Worksheets("BD_CAD_VND").Range("E1").Value = ºDATA_FASE_1("")
+    ºExport.Worksheets("Lançamentos").UsedRange.Value = ºExport.Worksheets("Lançamentos").UsedRange.Value
+    ºExport.SetPasswordEncryptionOptions _
+    PasswordEncryptionProvider:="Microsoft Strong Cryptographic Provider", _
+    PasswordEncryptionAlgorithm:="RC4", _
+    PasswordEncryptionKeyLength:=128, _
+    PasswordEncryptionFileProperties:=True
+    ºExport.SaveAs filename:=ºWB.Path & "\" & ºNome & ºN & ".vcw", Password:="wmscyrela2017!,!,"
+    ºExport.Close
+    MsgBox "Arquivo exportado com sucesso em " & ºWB.Path & "\" & ºNome & ºN & ".vcw", , ""
+End Sub
+
+
+
+

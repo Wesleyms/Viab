@@ -1,0 +1,144 @@
+VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} vinculo_lçto 
+   ClientHeight    =   2760
+   ClientLeft      =   45
+   ClientTop       =   375
+   ClientWidth     =   4710
+   OleObjectBlob   =   "vinculo_lçto.frx":0000
+   StartUpPosition =   2  'CenterScreen
+End
+Attribute VB_Name = "vinculo_lçto"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+
+Function ErroMsg2(N_Err As Variant) As Boolean
+    ErroMsg2 = False
+    If N_Err.Number <> 0 Then
+        Me.Hide
+        ErroMsg (N_Err)
+        ErroMsg2 = True
+    End If
+End Function
+
+Sub ATT_EVNT()
+    Call FormatarNumCur(Me.Name, "TB_Meses_Event", 0)
+    If TB_Meses_Event.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        If OptionButton2.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_LCTO.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_LCTO.Caption)
+        End If
+    Else
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+End Sub
+
+Sub ATT_NVINC()
+    Call FormatarNumCur(Me.Name, "M_N_VINC", 0)
+    If M_N_VINC.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        DT_N_VINC.Caption = Format(Application.EDate(ºData, M_N_VINC.Value), "mm/yyyy")
+    Else
+        DT_N_VINC.Caption = ""
+    End If
+End Sub
+Private Sub M_N_VINC_AFTERUPDATE()
+    Call FormatarNumCur(Me.Name, "M_N_VINC", 0)
+    If M_N_VINC.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        DT_N_VINC.Caption = Format(Application.EDate(ºData, M_N_VINC.Value), "mm/yyyy")
+    Else
+        DT_N_VINC.Caption = ""
+    End If
+End Sub
+
+Private Sub OK_Click()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg2(Err) Then Exit Sub
+    
+    CadastroUnidades.CB_EVENTO_TI.Clear
+    If OptionButton2.Value Then
+        If TB_Meses_Event = "" Then
+            TB_Meses_Event.Value = 0
+            Call TB_Meses_Event_AFTERUPDATE
+        End If
+        If ºABA = 1 Then
+            CadastroUnidades.TB_INI_OBRA.Value = "LCTO " & TB_Meses_Event.Value
+        ElseIf ºABA = 2 Then
+            CadastroUnidades.TB_DURACAO_1.Value = "LCTO " & TB_Meses_Event.Value
+        End If
+    Else
+        If ºABA = 1 Then
+            CadastroUnidades.TB_INI_OBRA.Value = M_N_VINC.Value
+        ElseIf ºABA = 2 Then
+            CadastroUnidades.TB_DURACAO_1.Value = M_N_VINC.Value
+        End If
+    End If
+    Unload Me
+End Sub
+
+Private Sub OptionButton1_Change()
+    M_N_VINC.Enabled = OptionButton1.Value
+    If M_N_VINC.Enabled Then M_N_VINC.BackColor = &H80000005 Else M_N_VINC.BackColor = &H8000000F
+    If Not OptionButton1.Value Then
+        TB_Meses_Event.Enabled = True
+        TB_Meses_Event.BackColor = &H80000005
+    Else
+        TB_Meses_Event.Enabled = False
+        TB_Meses_Event.BackColor = &H8000000F
+        TB_Meses_Event.Value = ""
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+End Sub
+
+Private Sub TB_Meses_Event_AFTERUPDATE()
+    Call FormatarNumCur(Me.Name, "TB_Meses_Event", 0)
+    If TB_Meses_Event.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        If OptionButton2.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_LCTO.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_LCTO.Caption)
+        End If
+    Else
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+End Sub
+
+Private Sub UserForm_Initialize()
+    ºData_lcto = ºDATA_FASE_1("")
+    ºData = DateValue(ºDATA_BASE_FLX)
+    If ºData_lcto = "" Then ºData_lcto = ºData
+    M_LCTO.Caption = DateDiff("m", ºData, ºData_lcto)
+    DT_LCTO.Caption = Format(ºData_lcto, "mm/yyyy")
+    
+    If ºABA = 1 Then
+        If Application.IfError(Application.Search("LCTO ", CadastroUnidades.TB_INI_OBRA.Value), 0) <> 0 Then
+            OptionButton2.Value = True
+            TB_Meses_Event.Value = Replace(CadastroUnidades.TB_INI_OBRA.Value, "LCTO ", "")
+            ATT_EVNT
+        Else
+            M_N_VINC.Value = CadastroUnidades.TB_INI_OBRA.Value
+            ATT_NVINC
+        End If
+    ElseIf ºABA = 2 Then
+        If Application.IfError(Application.Search("LCTO ", CadastroUnidades.TB_DURACAO_1.Value), 0) <> 0 Then
+            OptionButton2.Value = True
+            TB_Meses_Event.Value = Replace(CadastroUnidades.TB_DURACAO_1.Value, "LCTO ", "")
+            ATT_EVNT
+        Else
+            M_N_VINC.Value = CadastroUnidades.TB_DURACAO_1.Value
+            ATT_NVINC
+        End If
+    End If
+End Sub
+
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+    SendKeys "~", 0.00001
+End Sub

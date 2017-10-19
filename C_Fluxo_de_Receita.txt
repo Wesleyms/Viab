@@ -1,0 +1,1779 @@
+Attribute VB_Name = "C_Fluxo_de_Receita"
+Option Explicit
+'TIPOLOGIAS LINHAS 3 A 33
+'VAGAS EXTRAS LINHAS 35 A 55
+'CURVAS DE VENDAS LINHAS 57 A 106
+'TABELA DE VENDAS LINHAS 108 A 157
+'PERFIS DE TAXAS LINHAS 159 A 208
+'CUSTO DE OBRA LINHAS 210 A 259
+'CURVA DE OBRA LINHAS 261 A 461
+'TERRENO LINHAS  462 A 496
+'METRAGENS LINHAS 498 A 521
+'TIPOS DE PARCELAS LINHAS 523 A 545
+Public ºMenorINDICE, ºMaiorINDICE As Integer
+Function checarDatas()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Function
+   
+   ºMenorINDICE = 0
+    ºMaiorINDICE = 0
+    Dim ºL, ºN, ºG, ºLinhas As Double
+    Dim ºC_TBL, ºCOLBD, ºR, ºLINHASFLUXO As Integer
+    'LANÇAMENTOS
+    For ºL = 2 To ThisWorkbook.Sheets("Lançamentos").Cells(Rows.Count, 2).End(xlUp).Row
+        If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 7).Value < ºMenorINDICE Then ºMenorINDICE = ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 7).Value
+        ºN = ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 5).Value - 1
+        ºG = ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 7).Value
+        Do Until ºN = 0
+            ºG = ºG + 1
+            ºN = ºN - 1
+        Loop
+        If ºMaiorINDICE < ºG Then ºMaiorINDICE = ºG
+    Next
+    'PARCELAMENTO
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(157, 2).End(xlUp).Row > 107 Then
+        For ºL = 108 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(157, 2).End(xlUp).Row
+            For ºC_TBL = 3 To 172 Step 9
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 2).Value <> "" Then
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 2).Value < ºMenorINDICE Then ºMenorINDICE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 2).Value
+                End If
+            Next
+        Next
+    End If
+    'CURVA DE VENDA
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(106, 2).End(xlUp).Row > 56 Then
+        For ºL = 57 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(106, 2).End(xlUp).Row
+            For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, Columns.Count).End(xlToLeft).Column Step 3
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºCOLBD).Value <> "" Then
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºCOLBD + 2).Value < ºMenorINDICE Then ºMenorINDICE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºCOLBD + 2).Value
+                End If
+            Next
+        Next
+    End If
+    'OBRA
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, 2).End(xlUp).Row > 209 Then
+        For ºL = 210 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, 2).End(xlUp).Row
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value <> "" Then
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value < ºMenorINDICE Then ºMenorINDICE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value
+                If DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value, 0) + ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 12).Value > ºMaiorINDICE Then ºMaiorINDICE = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value, 0) + ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 12).Value
+            End If
+        Next
+    End If
+    'IMPOSTOS
+    ºR = Application.Match("ºT_Pagamento", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value < ºMenorINDICE Then ºMenorINDICE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value > ºMaiorINDICE Then ºMaiorINDICE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+    
+    ºR = Application.Match("ºT_Pagamento_ITBI", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value < ºMenorINDICE Then ºMenorINDICE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value > ºMaiorINDICE Then ºMaiorINDICE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+    
+    ºLinhas = ThisWorkbook.Sheets("BD_TBL_VND").Cells(Rows.Count, 1).End(xlUp).Row
+    ºLINHASFLUXO = ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºLinhas, 1).Value - ºMenorINDICE + 6
+    If ºMaiorINDICE - ºMenorINDICE + 6 < ºLINHASFLUXO Then ºMaiorINDICE = ºLINHASFLUXO
+    ºMaiorINDICE = ºMaiorINDICE - ºMenorINDICE + 16
+End Function
+
+Function Criar_Tabela()
+'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Function
+
+Dim ºC, ºLinTPLG, ºLinPerfis, ºL, ºTPLG, ºTblVnd, ºTblVnd_2, ºTblVel, ºInicioVnd, ºCOLBD, ºVel_Ini, ºNcol, ºNcol_2, ºFimChaves, ºC_TBL, ºTipo, ºIniJur, ºFIM As Integer
+Dim ºFXini, ºIni, ºFXFim, ºQnt, ºUltimaP, ºQntJur, ºPARCELAS, ºR As Integer
+Dim ºLinTBL, ºTaxaAno, ºTaxaMes, ºUltimaPreenchida, ºPerfilTP, ºY, ºVgv, ºJuros, ºI, ºVgvjUR, ºTX As Double
+Dim ºFASE, ºPeriod, ºVelocidades, ºPZ_DOC As Variant
+Criar_Tabela = "erro"
+ºLinTPLG = ThisWorkbook.Sheets("BD_CAD_VND").Cells(33, 3).End(xlUp).Row
+ºLinPerfis = ThisWorkbook.Sheets("BD_CAD_VND").Cells(208, 3).End(xlUp).Row
+
+'TAXA VP
+ºC = Application.Match("Taxa VP", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+ºLinTBL = 4
+For ºL = 159 To ºLinPerfis
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºL).Value Then
+        ºTaxaAno = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Text, "%", "")) / 100
+        Exit For
+    End If
+Next
+
+'LIMPAR TABELAS
+ThisWorkbook.Sheets("BD_TBL_VND").UsedRange.ClearContents
+ThisWorkbook.Sheets("BD_TBL_JUR").UsedRange.ClearContents
+ThisWorkbook.Sheets("BD_TBL_FIN").UsedRange.ClearContents
+
+'PRAZO DE DOCUMENTAÇÃO
+ºR = Application.Match("ºAS_PZ_DOC", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+ºPZ_DOC = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+If ºPZ_DOC = "" Then ºPZ_DOC = 0
+
+ºUltimaPreenchida = 0
+For ºTPLG = 3 To ºLinTPLG
+    'PERFIL
+    ºC = Application.Match("Perfil Venda", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value = "" Then Exit Function
+    ºPerfilTP = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("A901:A950"), 0), 0)
+    If ºPerfilTP = 0 Then Exit Function
+    'TAXA DE JUROS
+    ºTaxaAno = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 6).Text, "%", "")) / 100
+    ºTaxaMes = (1 + ºTaxaAno) ^ (1 / 12) - 1
+    'FASE
+    ºC = Application.Match("Fase", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    ºFASE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    'TABELA DE VENDAS
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value <> "" Then
+        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value) - 2)
+    ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value <> "" Then
+        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value) - 2)
+    Else
+        Exit Function
+    End If
+    'VELOCIDADE DE VENDAS
+    ºTblVel = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 3).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B57:B105"), 0), 0)
+    ºCOLBD = ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column - 2) / 3) - 1
+    
+    ReDim ºVelocidades(ºCOLBD, 2)
+    For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column Step 3
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+            'inicio
+            ºVelocidades((ºCOLBD - 3) / 3, 0) = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0)
+            '%de Venda
+            ºVelocidades((ºCOLBD - 3) / 3, 1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value
+            'Duração
+            ºVelocidades((ºCOLBD - 3) / 3, 2) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 1).Value
+        End If
+    Next
+    ºVelocidades = BubbleSort(ºVelocidades, 0, 2)
+    
+    ºInicioVnd = ºVelocidades(0, 0)
+    ºNcol = 0
+    For ºCOLBD = 0 To UBound(ºVelocidades)
+        ºVel_Ini = ºVelocidades(ºCOLBD, 0)
+        If ºNcol < ºVelocidades(ºCOLBD, 2) + ºVel_Ini - ºInicioVnd Then
+            ºNcol = CDbl(ºVelocidades(ºCOLBD, 2)) + CDbl(ºVel_Ini) - CDbl(ºInicioVnd)
+        End If
+    Next
+    
+    ºNcol_2 = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 8).Value <> "" Then
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value <> "" Then
+            ºTblVnd_2 = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value) - 2)
+        End If
+        ºNcol_2 = ºNcol - (ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 8).Value - ºInicioVnd)
+        ºNcol = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 8).Value - ºInicioVnd
+    End If
+    ºFimChaves = 42
+    For ºC_TBL = 3 To 172 Step 9
+        ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL).Value
+        If ºTipo = "9" Then
+            ºFimChaves = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 8).Value
+        End If
+    Next
+    For ºY = 2 + ºUltimaPreenchida To ºNcol + 1 + ºUltimaPreenchida
+        ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, ºY).Value = ºTPLG - 2
+        ThisWorkbook.Sheets("BD_TBL_VND").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+        ThisWorkbook.Sheets("BD_TBL_VND").Cells(3, ºY).Value = ºFASE
+        ThisWorkbook.Sheets("BD_TBL_JUR").Cells(1, ºY).Value = ºTPLG - 2
+        ThisWorkbook.Sheets("BD_TBL_JUR").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+        ThisWorkbook.Sheets("BD_TBL_JUR").Cells(3, ºY).Value = ºFASE
+        ThisWorkbook.Sheets("BD_TBL_FIN").Cells(1, ºY).Value = ºTPLG - 2
+        ThisWorkbook.Sheets("BD_TBL_FIN").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+        ThisWorkbook.Sheets("BD_TBL_FIN").Cells(3, ºY).Value = ºFASE
+        For ºC_TBL = 3 To 172 Step 9
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL).Value <> "" Then
+                ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL).Value
+                ºPeriod = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & Application.Match(ºTipo, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550"), 0) + 522).Value
+                ºVgv = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 3).Value
+                ºJuros = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 4).Value
+                ºIniJur = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 5).Value, CInt(ºFASE))
+                ºFIM = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 8).Value, CInt(ºFASE))
+                ºFXini = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 6).Value
+                If ºFXini = 0 Then
+                    ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 2).Value, CInt(ºFASE)) + ºInicioVnd + ((ºY - ºUltimaPreenchida) - 2)
+                Else
+                    ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 2).Value, CInt(ºFASE))
+                    If ºIni < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 Then ºIni = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                End If
+                ºFXFim = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 7).Value
+                ºQnt = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 1).Value
+                ºUltimaP = (ºIni + ((ºQnt - 1) * ºPeriod))
+                If ºUltimaP > ºFIM And ºFIM < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 Then
+                    ºFIM = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                End If
+                If ºFXFim = 1 And ºUltimaP > ºFIM And ºFXini <> 1 Then
+                    Do Until ºUltimaP <= ºFIM
+                        ºQnt = ºQnt - 1
+                        ºUltimaP = (ºIni + ((ºQnt - 1) * ºPeriod))
+                    Loop
+                    If ºQnt < 1 Then
+                        ºQnt = 1
+                        ºIni = ºFIM
+                    End If
+                End If
+                'ºQntJur = ºQnt
+                If ºIniJur < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 And ºIniJur <> 0 Then
+                    ºIniJur = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                    'ºQntJur = ºQntJur - 1
+                End If
+                For ºI = 1 To ºQnt * ºPeriod
+                    If (ºI - 1) Mod ºPeriod = 0 Then
+                        If ºTipo <> 8 Or ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value = False Or Not ThisWorkbook.Sheets("BD_CAD_VND").Range("G" & ºPerfilTP + 900).Value Then
+                            ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºIni + ºI + 3, ºY).Value = ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºIni + ºI + 3, ºY).Value + (ºVgv / ºQnt)
+                            If ºJuros = 1 And (ºIni + ºI - 1) > ºIniJur Then 'And ºQntJur > 0 Then
+                                If ºPeriod = 1 Then
+                                    If ºIniJur < ºIni Then
+                                        ºPARCELAS = ºQnt
+                                    Else
+                                        ºPARCELAS = ºQnt - (ºIniJur - ºIni + 1)
+                                    End If
+                                    If ºIniJur < ºIni Then
+                                        ºVgvjUR = (Application.FV(ºTaxaMes, ºIni - ºIniJur - 1, 0, ºVgv) / ºQnt) * ºPARCELAS
+                                    Else
+                                        ºVgvjUR = (ºVgv / ºQnt) * ºPARCELAS * -1
+                                    End If
+                                    ºTX = Application.Pmt(ºTaxaMes, ºPARCELAS, ºVgvjUR)
+                                    ThisWorkbook.Sheets("BD_TBL_JUR").Cells(ºIni + ºI + 3, ºY).Value = ThisWorkbook.Sheets("BD_TBL_JUR").Cells(ºIni + ºI + 3, ºY).Value + ºTX - (ºVgv / ºQnt)
+                                Else
+                                    If ºIniJur < ºIni Then
+                                        ºPARCELAS = ºQnt
+                                    Else
+                                        ºPARCELAS = ºIni + ºI - ºIniJur - 1
+                                    End If
+                                    
+                                    If ºPARCELAS > 0 Then
+                                        If ºIniJur < ºIni Then
+                                            ºVgvjUR = (Application.FV(ºTaxaMes, ºIni - ºIniJur - 1, 0, ºVgv) / ºQnt) * ºPARCELAS
+                                        Else
+                                            ºVgvjUR = (ºVgv / ºQnt) * Round((ºPARCELAS / ºPeriod) + 0.5, 0) * -1
+                                        End If
+                                        If Round((ºPARCELAS / ºPeriod) + 0.5, 0) > 1 Then
+                                            ºTX = Application.Pmt(ºTaxaMes, ºPARCELAS, ºVgvjUR)
+                                        Else
+                                            ºTX = Application.FV(ºTaxaMes, ºPARCELAS, 0, ºVgvjUR)
+                                        End If
+                                        ThisWorkbook.Sheets("BD_TBL_JUR").Cells(ºIni + ºI + 3, ºY).Value = ThisWorkbook.Sheets("BD_TBL_JUR").Cells(ºIni + ºI + 3, ºY).Value + ºTX - (ºVgv / ºQnt)
+                                    End If
+                                End If
+                            End If
+                        Else
+                            ThisWorkbook.Sheets("BD_TBL_FIN").Cells(ºIni + ºI + 3 + ºPZ_DOC, ºY).Value = ThisWorkbook.Sheets("BD_TBL_FIN").Cells(ºIni + ºI + 3, ºY).Value + (ºVgv / ºQnt)
+                        End If
+                    End If
+                Next
+            End If
+        Next
+    Next
+    ºUltimaPreenchida = ºUltimaPreenchida + ºNcol
+    ºInicioVnd = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 8).Value
+    For ºY = 2 + ºUltimaPreenchida To ºNcol_2 + 1 + ºUltimaPreenchida
+        ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, ºY).Value = ºTPLG - 2
+        ThisWorkbook.Sheets("BD_TBL_VND").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+        ThisWorkbook.Sheets("BD_TBL_VND").Cells(3, ºY).Value = ºFASE
+        ThisWorkbook.Sheets("BD_TBL_JUR").Cells(1, ºY).Value = ºTPLG - 2
+        ThisWorkbook.Sheets("BD_TBL_JUR").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+        ThisWorkbook.Sheets("BD_TBL_JUR").Cells(3, ºY).Value = ºFASE
+        ThisWorkbook.Sheets("BD_TBL_FIN").Cells(1, ºY).Value = ºTPLG - 2
+        ThisWorkbook.Sheets("BD_TBL_FIN").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+        ThisWorkbook.Sheets("BD_TBL_FIN").Cells(3, ºY).Value = ºFASE
+        For ºC_TBL = 3 To 172 Step 9
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL).Value <> "" Then
+                ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL).Value
+                ºPeriod = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & Application.Match(ºTipo, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550"), 0) + 522).Value
+                ºVgv = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 3).Value
+                ºJuros = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 4).Value
+                ºIniJur = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 5).Value, CInt(ºFASE))
+                ºFIM = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 8).Value, CInt(ºFASE))
+                ºFXini = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 6).Value
+                If ºFXini = 0 Then
+                    ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 2).Value, CInt(ºFASE)) + ºInicioVnd + ((ºY - ºUltimaPreenchida) - 2)
+                Else
+                    ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 2).Value, CInt(ºFASE))
+                    If ºIni < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 Then ºIni = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                End If
+                ºFXFim = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 7).Value
+                ºQnt = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 1).Value
+                ºUltimaP = (ºIni + ((ºQnt - 1) * ºPeriod))
+                If ºUltimaP > ºFIM And ºFIM < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 Then
+                    ºFIM = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                End If
+                If ºFXFim = 1 And ºUltimaP > ºFIM And ºFXini <> 1 Then
+                    Do Until ºUltimaP <= ºFIM
+                        ºQnt = ºQnt - 1
+                        ºUltimaP = (ºIni + ((ºQnt - 1) * ºPeriod))
+                    Loop
+                    If ºQnt < 1 Then
+                        ºQnt = 1
+                        ºIni = ºFIM
+                    End If
+                End If
+                'ºQntJur = ºQnt
+                If ºIniJur < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 And ºIniJur <> 0 Then
+                    ºIniJur = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                    'ºQntJur = ºQntJur - 1
+                End If
+                For ºI = 1 To ºQnt * ºPeriod
+                    If (ºI - 1) Mod ºPeriod = 0 Then
+                        If ºTipo <> 8 Or ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value = False Or Not ThisWorkbook.Sheets("BD_CAD_VND").Range("G" & ºPerfilTP + 900).Value Then
+                            ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºIni + ºI + 3, ºY).Value = ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºIni + ºI + 3, ºY).Value + (ºVgv / ºQnt)
+                            If ºJuros = 1 And (ºIni + ºI - 1) > ºIniJur Then 'And ºQntJur > 0 Then
+                                ºPARCELAS = ºIni + (ºPeriod * ºQnt) - ºIniJur - 1
+                                If ºPARCELAS > 0 Then
+                                    ºVgvjUR = (ºVgv / ºQnt) * ºPARCELAS
+                                    ºTX = Application.Pmt(ºTaxaMes, ºPARCELAS, ºVgvjUR) * -1
+                                    ThisWorkbook.Sheets("BD_TBL_JUR").Cells(ºIni + ºI + 3, ºY).Value = ºTX - (ºVgvjUR / ºPARCELAS)
+                                End If
+                            End If
+                        Else
+                            ThisWorkbook.Sheets("BD_TBL_FIN").Cells(ºIni + ºI + 3 + ºPZ_DOC, ºY).Value = ThisWorkbook.Sheets("BD_TBL_FIN").Cells(ºIni + ºI + 3, ºY).Value + (ºVgv / ºQnt)
+                        End If
+                    End If
+                Next
+            End If
+        Next
+    Next
+    For ºL = ºLinTBL To ThisWorkbook.Sheets("BD_TBL_VND").UsedRange.Rows.Count + ThisWorkbook.Sheets("BD_TBL_VND").UsedRange.Row - 1
+        ThisWorkbook.Sheets("BD_TBL_VND").Range("A" & ºL).Value = ºL - 4
+        ThisWorkbook.Sheets("BD_TBL_JUR").Range("A" & ºL).Value = ºL - 4
+        ThisWorkbook.Sheets("BD_TBL_FIN").Range("A" & ºL).Value = ºL - 4
+    Next
+    ºUltimaPreenchida = ºUltimaPreenchida + ºNcol_2
+Next
+
+ThisWorkbook.Sheets("BD_TBL_VND").Range("a4").Copy
+ºL = ThisWorkbook.Sheets("BD_TBL_VND").Cells(Rows.Count, 1).End(xlUp).Row
+ºC = ThisWorkbook.Sheets("BD_TBL_VND").Cells(3, Columns.Count).End(xlToLeft).Column
+ThisWorkbook.Sheets("BD_TBL_VND").Range(Cells(4, 2).Address & ":" & Cells(ºL, ºC).Address).PasteSpecial Paste:=xlPasteValues, Operation:=xlAdd
+ThisWorkbook.Sheets("BD_TBL_JUR").Range(Cells(4, 2).Address & ":" & Cells(ºL, ºC).Address).PasteSpecial Paste:=xlPasteValues, Operation:=xlAdd
+ThisWorkbook.Sheets("BD_TBL_FIN").Range(Cells(4, 2).Address & ":" & Cells(ºL, ºC).Address).PasteSpecial Paste:=xlPasteValues, Operation:=xlAdd
+Application.CutCopyMode = False
+Criar_Tabela = "ok"
+ºLinTPLG = ThisWorkbook.Sheets("BD_CAD_VND").Cells(55, 3).End(xlUp).Row
+If ºLinTPLG < 35 Then Exit Function
+Criar_Tabela = "erro"
+
+'Vagas  extras
+For ºTPLG = 35 To ºLinTPLG
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºTPLG).Value Then
+        'PERFIL
+        ºC = Application.Match("Perfil Venda", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value = "" Then Exit Function
+        ºPerfilTP = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("A901:A950"), 0), 0)
+        If ºPerfilTP = 0 Then Exit Function
+        'TAXA DE JUROS
+        ºTaxaAno = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 6).Text, "%", "")) / 100
+        ºTaxaMes = (1 + ºTaxaAno) ^ (1 / 12) - 1
+        'FASE
+        ºC = Application.Match("Fase", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+        ºFASE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+        'TABELA DE VENDAS
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value <> "" Then
+            ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value) - 2)
+        ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value <> "" Then
+            ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value) - 2)
+        Else
+            Exit Function
+        End If
+        'VELOCIDADE DE VENDAS
+        ºTblVel = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 3).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B57:B105"), 0), 0)
+        ºCOLBD = ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column - 2) / 3) - 1
+        
+        ReDim ºVelocidades(ºCOLBD, 2)
+        For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column Step 3
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+                'inicio
+                ºVelocidades((ºCOLBD - 3) / 3, 0) = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0)
+                '%de Venda
+                ºVelocidades((ºCOLBD - 3) / 3, 1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value
+                'Duração
+                ºVelocidades((ºCOLBD - 3) / 3, 2) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 1).Value
+            End If
+        Next
+        ºVelocidades = BubbleSort(ºVelocidades, 0, 2)
+        
+        ºInicioVnd = ºVelocidades(0, 0)
+        ºNcol = 0
+        For ºCOLBD = 0 To UBound(ºVelocidades)
+            ºVel_Ini = ºVelocidades(ºCOLBD, 0)
+            If ºNcol < ºVelocidades(ºCOLBD, 2) + ºVel_Ini - ºInicioVnd Then
+                ºNcol = CDbl(ºVelocidades(ºCOLBD, 2)) + CDbl(ºVel_Ini) - CDbl(ºInicioVnd)
+            End If
+        Next
+            
+        ºNcol_2 = 0
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 8).Value <> "" Then
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value <> "" Then
+                ºTblVnd_2 = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value) - 2)
+            End If
+            ºNcol_2 = ºNcol - (ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 8).Value - ºInicioVnd)
+            ºNcol = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 8).Value - ºInicioVnd
+        End If
+        ºFimChaves = 42
+        For ºC_TBL = 3 To 172 Step 9
+            ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL).Value
+            If ºTipo = "9" Then
+                ºFimChaves = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 8).Value
+            End If
+        Next
+        For ºY = 2 + ºUltimaPreenchida To ºNcol + 1 + ºUltimaPreenchida
+            ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, ºY).Value = ºTPLG - 2
+            ThisWorkbook.Sheets("BD_TBL_VND").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+            ThisWorkbook.Sheets("BD_TBL_VND").Cells(3, ºY).Value = ºFASE
+            ThisWorkbook.Sheets("BD_TBL_JUR").Cells(1, ºY).Value = ºTPLG - 2
+            ThisWorkbook.Sheets("BD_TBL_JUR").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+            ThisWorkbook.Sheets("BD_TBL_JUR").Cells(3, ºY).Value = ºFASE
+            ThisWorkbook.Sheets("BD_TBL_FIN").Cells(1, ºY).Value = ºTPLG - 2
+            ThisWorkbook.Sheets("BD_TBL_FIN").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+            ThisWorkbook.Sheets("BD_TBL_FIN").Cells(3, ºY).Value = ºFASE
+            For ºC_TBL = 3 To 172 Step 9
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL).Value <> "" Then
+                    ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL).Value
+                    ºPeriod = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & Application.Match(ºTipo, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550"), 0) + 522).Value
+                    ºVgv = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 3).Value
+                    ºJuros = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 4).Value
+                    ºIniJur = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 5).Value, CInt(ºFASE))
+                    ºFIM = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 8).Value, CInt(ºFASE))
+                    ºFXini = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 6).Value
+                    If ºFXini = 0 Then
+                        ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 2).Value, CInt(ºFASE)) + ºInicioVnd + ((ºY - ºUltimaPreenchida) - 2)
+                    Else
+                        ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 2).Value, CInt(ºFASE))
+                        If ºIni < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 Then ºIni = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                    End If
+                    ºFXFim = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 7).Value
+                    ºQnt = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 1).Value
+                    ºUltimaP = (ºIni + ((ºQnt - 1) * ºPeriod))
+                    If ºUltimaP > ºFIM And ºFIM < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 Then
+                        ºFIM = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                    End If
+                    If ºFXFim = 1 And ºUltimaP > ºFIM And ºFXini <> 1 Then
+                        Do Until ºUltimaP <= ºFIM
+                            ºQnt = ºQnt - 1
+                            ºUltimaP = (ºIni + ((ºQnt - 1) * ºPeriod))
+                        Loop
+                        If ºQnt < 1 Then
+                            ºQnt = 1
+                            ºIni = ºFIM
+                        End If
+                    End If
+                    'ºQntJur = ºQnt
+                    If ºIniJur < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 And ºIniJur <> 0 Then
+                        ºIniJur = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                        'ºQntJur = ºQntJur - 1
+                    End If
+                    For ºI = 1 To ºQnt * ºPeriod
+                        If (ºI - 1) Mod ºPeriod = 0 Then
+                            If ºTipo <> 8 Or ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value = False Or Not ThisWorkbook.Sheets("BD_CAD_VND").Range("G" & ºPerfilTP + 900).Value Then
+                                ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºIni + ºI + 3, ºY).Value = ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºIni + ºI + 3, ºY).Value + (ºVgv / ºQnt)
+                                If ºJuros = 1 And (ºIni + ºI - 1) > ºIniJur Then 'And ºQntJur > 0 Then
+                                    ºPARCELAS = ºIni + (ºPeriod * ºQnt) - ºIniJur - 1
+                                    ºVgvjUR = (ºVgv / ºQnt) * ºPARCELAS
+                                    ºTX = Application.Pmt(ºTaxaMes, ºPARCELAS, ºVgvjUR) * -1
+                                    ThisWorkbook.Sheets("BD_TBL_JUR").Cells(ºIni + ºI + 3, ºY).Value = ºTX - (ºVgvjUR / ºPARCELAS)
+                                End If
+                            Else
+                                ThisWorkbook.Sheets("BD_TBL_FIN").Cells(ºIni + ºI + 3, ºY).Value = ThisWorkbook.Sheets("BD_TBL_FIN").Cells(ºIni + ºI + 3, ºY).Value + (ºVgv / ºQnt)
+                            End If
+                        End If
+                    Next
+                End If
+            Next
+        Next
+        ºUltimaPreenchida = ºUltimaPreenchida + ºNcol
+        ºInicioVnd = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 8).Value
+        For ºY = 2 + ºUltimaPreenchida To ºNcol_2 + 1 + ºUltimaPreenchida
+            ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, ºY).Value = ºTPLG - 2
+            ThisWorkbook.Sheets("BD_TBL_VND").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+            ThisWorkbook.Sheets("BD_TBL_VND").Cells(3, ºY).Value = ºFASE
+            ThisWorkbook.Sheets("BD_TBL_JUR").Cells(1, ºY).Value = ºTPLG - 2
+            ThisWorkbook.Sheets("BD_TBL_JUR").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+            ThisWorkbook.Sheets("BD_TBL_JUR").Cells(3, ºY).Value = ºFASE
+            ThisWorkbook.Sheets("BD_TBL_FIN").Cells(1, ºY).Value = ºTPLG - 2
+            ThisWorkbook.Sheets("BD_TBL_FIN").Cells(2, ºY).Value = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+            ThisWorkbook.Sheets("BD_TBL_FIN").Cells(3, ºY).Value = ºFASE
+            For ºC_TBL = 3 To 172 Step 9
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL).Value <> "" Then
+                    ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL).Value
+                    ºPeriod = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & Application.Match(ºTipo, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550"), 0) + 522).Value
+                    ºVgv = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 3).Value
+                    ºJuros = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 4).Value
+                    ºIniJur = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 5).Value, CInt(ºFASE))
+                    ºFIM = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 8).Value, CInt(ºFASE))
+                    ºFXini = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 6).Value
+                    If ºFXini = 0 Then
+                        ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 2).Value, CInt(ºFASE)) + ºInicioVnd + ((ºY - ºUltimaPreenchida) - 2)
+                    Else
+                        ºIni = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 2).Value, CInt(ºFASE))
+                        If ºIni < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 Then ºIni = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                    End If
+                    ºFXFim = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 7).Value
+                    ºQnt = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd_2 + 107, ºC_TBL + 1).Value
+                    ºUltimaP = (ºIni + ((ºQnt - 1) * ºPeriod))
+                    If ºUltimaP > ºFIM And ºFIM < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 Then
+                        ºFIM = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                    End If
+                    If ºFXFim = 1 And ºUltimaP > ºFIM And ºFXini <> 1 Then
+                        Do Until ºUltimaP <= ºFIM
+                            ºQnt = ºQnt - 1
+                            ºUltimaP = (ºIni + ((ºQnt - 1) * ºPeriod))
+                        Loop
+                        If ºQnt < 1 Then
+                            ºQnt = 1
+                            ºIni = ºFIM
+                        End If
+                    End If
+                    'ºQntJur = ºQnt
+                    If ºIniJur < ºInicioVnd + (ºY - ºUltimaPreenchida) - 2 And ºIniJur <> 0 Then
+                        ºIniJur = ºInicioVnd + (ºY - ºUltimaPreenchida) - 2
+                        'ºQntJur = ºQntJur - 1
+                    End If
+                    For ºI = 1 To ºQnt * ºPeriod
+                        If (ºI - 1) Mod ºPeriod = 0 Then
+                            If ºTipo <> 8 Or ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value = False Or Not ThisWorkbook.Sheets("BD_CAD_VND").Range("G" & ºPerfilTP + 900).Value Then
+                                ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºIni + ºI + 3, ºY).Value = ThisWorkbook.Sheets("BD_TBL_VND").Cells(ºIni + ºI + 3, ºY).Value + (ºVgv / ºQnt)
+                                If ºJuros = 1 And (ºIni + ºI - 1) > ºIniJur Then 'And ºQntJur > 0 Then
+                                    ºPARCELAS = ºIni + (ºPeriod * ºQnt) - ºIniJur - 1
+                                    ºVgvjUR = (ºVgv / ºQnt) * ºPARCELAS
+                                    ºTX = Application.Pmt(ºTaxaMes, ºPARCELAS, ºVgvjUR) * -1
+                                    ThisWorkbook.Sheets("BD_TBL_JUR").Cells(ºIni + ºI + 3, ºY).Value = ºTX - (ºVgvjUR / ºPARCELAS)
+                                End If
+                            Else
+                                ThisWorkbook.Sheets("BD_TBL_FIN").Cells(ºIni + ºI + 3, ºY).Value = ThisWorkbook.Sheets("BD_TBL_FIN").Cells(ºIni + ºI + 3, ºY).Value + (ºVgv / ºQnt)
+                            End If
+                        End If
+                    Next
+                End If
+            Next
+        Next
+        For ºL = ºLinTBL To ThisWorkbook.Sheets("BD_TBL_VND").UsedRange.Rows.Count + ThisWorkbook.Sheets("BD_TBL_VND").UsedRange.Row - 1
+            ThisWorkbook.Sheets("BD_TBL_VND").Range("A" & ºL).Value = ºL - 4
+            ThisWorkbook.Sheets("BD_TBL_JUR").Range("A" & ºL).Value = ºL - 4
+            ThisWorkbook.Sheets("BD_TBL_FIN").Range("A" & ºL).Value = ºL - 4
+        Next
+        ºUltimaPreenchida = ºUltimaPreenchida + ºNcol_2
+    End If
+Next
+ThisWorkbook.Sheets("BD_TBL_VND").Range("a4").Copy
+ºL = ThisWorkbook.Sheets("BD_TBL_VND").Cells(Rows.Count, 1).End(xlUp).Row
+ºC = ThisWorkbook.Sheets("BD_TBL_VND").Cells(3, Columns.Count).End(xlToLeft).Column
+ThisWorkbook.Sheets("BD_TBL_VND").Range(Cells(4, 2).Address & ":" & Cells(ºL, ºC).Address).PasteSpecial Paste:=xlPasteValues, Operation:=xlAdd
+ThisWorkbook.Sheets("BD_TBL_JUR").Range(Cells(4, 2).Address & ":" & Cells(ºL, ºC).Address).PasteSpecial Paste:=xlPasteValues, Operation:=xlAdd
+ThisWorkbook.Sheets("BD_TBL_FIN").Range(Cells(4, 2).Address & ":" & Cells(ºL, ºC).Address).PasteSpecial Paste:=xlPasteValues, Operation:=xlAdd
+
+Criar_Tabela = "ok"
+End Function
+
+Function CurvaRec()
+'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Function
+
+Dim ºC, ºLinTPLG, ºLinPerfis, ºL, ºTPLG, ºTblVnd, ºTblVel, ºInicioVnd, ºCOLBD, ºVel_Ini, ºNcol, ºFimChaves, ºC_TBL, ºTipo, ºIniJur, ºFIM As Integer
+Dim ºFXini, ºIni, ºFXFim, ºQnt, ºUltimaP, ºQntJur, ºPARCELAS, ºU, PZ_LIBERACAO, ºX, ºP, ºV, ºPeriodos, ºINICIO As Integer
+Dim ºLinTBL, ºTaxaAno, ºTaxaMes, ºUltimaPreenchida, ºPerfilTP, ºY, ºVgv, ºJuros, ºI, ºVgvjUR, ºTX, ºR, ºFraçãoT, ºPercent_TOT, ºPERMUTAS, ºUNIDADES As Double
+Dim ºAREA_PVT_COB, ºAREA_PVT_DESCOB, ºFATOR_DESCOB, ºVLR_M_COB As Double
+Dim ºFASE, ºPeriod, ºTerrenoVP, PRCT_DEFLA, ºPerfil_, ºPercent, ºdv_INI_vnd, ºPZ_DOC As Variant
+Dim ºAssociativo  As Boolean
+Dim ºVelocidade, ºF_ini_defla, ºA_Vend As String
+
+CurvaRec = "erro"
+ºLinTPLG = ThisWorkbook.Sheets("BD_CAD_VND").Cells(33, 3).End(xlUp).Row
+ºLinPerfis = ThisWorkbook.Sheets("BD_CAD_VND").Cells(208, 3).End(xlUp).Row
+ºAssociativo = ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value
+ºLinTBL = 4
+Application.Calculate
+If ºAssociativo Then
+    ºR = Application.Match("ºAS_VLR_TERRENO", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+ '   ºTerrenoVP = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+'    If ºTerrenoVP = "" Then ºTerrenoVP = 0
+    ºTerrenoVP = FormatDouble(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value)
+    ºFraçãoT = Replace(ºTerrenoVP / Application.SumProduct(ThisWorkbook.Sheets("BD_CAD_VND").Range("Q3:Q32")), ",", ".")
+    ºR = Application.Match("ºAS_PRCT_DEFLA", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    PRCT_DEFLA = Replace(((Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value, "%", "") + 1) - 1) / 100, ",", ".")
+End If
+
+'TAXA VP
+ºC = Application.Match("Taxa VP", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+ºLinTBL = 4
+For ºL = 159 To ºLinPerfis
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºL).Value Then
+        ºTaxaAno = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Text, "%", "")) / 100
+        Exit For
+    End If
+Next
+ºTaxaMes = (1 + ºTaxaAno) ^ (1 / 12) - 1
+
+'Limpa Abas
+ThisWorkbook.Sheets("BD_TBL_REC").UsedRange.ClearContents
+ThisWorkbook.Sheets("BD_TBL_REC_JUR").UsedRange.ClearContents
+ThisWorkbook.Sheets("BD_TBL_FIN_R").UsedRange.ClearContents
+ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").UsedRange.ClearContents
+ThisWorkbook.Sheets("BD_TBL_DEFLA").UsedRange.ClearContents
+ThisWorkbook.Sheets("BD_TBL_DEFLA_CMM").UsedRange.ClearContents
+ThisWorkbook.Sheets("BD_TBL_TERRENO").UsedRange.ClearContents
+
+'Checa a ultima linha na tabela de vendas
+ºL = ThisWorkbook.Sheets("BD_TBL_VND").Cells(Rows.Count, 1).End(xlUp).Row
+
+'copia o indice de meses
+ThisWorkbook.Sheets("BD_TBL_REC").Range("A1:A" & ºL).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:A" & ºL).Value
+ThisWorkbook.Sheets("BD_TBL_REC_JUR").Range("A1:A" & ºL).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:A" & ºL).Value
+If ºAssociativo Then
+    ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A1:A" & ºL).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:A" & ºL).Value
+    ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range("A1:A" & ºL).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:A" & ºL).Value
+    ThisWorkbook.Sheets("BD_TBL_DEFLA").Range("A1:A" & ºL).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:A" & ºL).Value
+    ThisWorkbook.Sheets("BD_TBL_TERRENO").Range("A1:A" & ºL).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:A" & ºL).Value
+End If
+
+ºU = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+ThisWorkbook.Sheets("BD_TBL_REC").Range("A1:" & Cells(3, ºU).Address).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:" & Cells(3, ºU).Address).Value
+ThisWorkbook.Sheets("BD_TBL_REC").Range("B3:" & Cells(3, ºU).Address).Value = 0
+ThisWorkbook.Sheets("BD_TBL_REC_JUR").Range("A1:" & Cells(3, ºU).Address).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:" & Cells(3, ºU).Address).Value
+If ºAssociativo Then
+    ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A1:" & Cells(2, ºU).Address).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:" & Cells(2, ºU).Address).Value
+    ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range("A1:" & Cells(2, ºU).Address).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:" & Cells(2, ºU).Address).Value
+    ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range("A1:" & Cells(1, ºU).Address).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A3:" & Cells(3, ºU).Address).Value
+    ThisWorkbook.Sheets("BD_TBL_DEFLA").Range("A1:" & Cells(2, ºU).Address).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:" & Cells(2, ºU).Address).Value
+    ThisWorkbook.Sheets("BD_TBL_DEFLA_CMM").Range("A1:" & Cells(2, ºU).Address).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:" & Cells(2, ºU).Address).Value
+    ThisWorkbook.Sheets("BD_TBL_TERRENO").Range("A1:" & Cells(2, ºU).Address).Value = ThisWorkbook.Sheets("BD_TBL_VND").Range("A1:" & Cells(2, ºU).Address).Value
+End If
+
+'PRAZO DE LIBERAÇÃO
+ºR = Application.Match("ºAS_PZ_LIBERACAO", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+PZ_LIBERACAO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+If PZ_LIBERACAO = "" Then PZ_LIBERACAO = 0
+'PRAZO DE DOCUMENTAÇÃO
+ºR = Application.Match("ºAS_PZ_DOC", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+ºPZ_DOC = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+If ºPZ_DOC = "" Then ºPZ_DOC = 0
+
+For ºX = 4 To ºL + 30 Step 1
+    If ThisWorkbook.Sheets("BD_TBL_REC").Range("A" & ºX).Value <> "" Then
+        ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_REC").Range("A" & ºX).Value
+        ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_REC").Range("A" & ºX).Value
+        ThisWorkbook.Sheets("BD_TBL_DEFLA").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_REC").Range("A" & ºX).Value
+        ThisWorkbook.Sheets("BD_TBL_DEFLA_CMM").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_REC").Range("A" & ºX).Value
+        ThisWorkbook.Sheets("BD_TBL_TERRENO").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_REC").Range("A" & ºX).Value
+    Else
+        ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A" & ºX - 1).Value + 1
+        ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A" & ºX - 1).Value + 1
+        ThisWorkbook.Sheets("BD_TBL_DEFLA").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A" & ºX - 1).Value + 1
+        ThisWorkbook.Sheets("BD_TBL_DEFLA_CMM").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A" & ºX - 1).Value + 1
+        ThisWorkbook.Sheets("BD_TBL_TERRENO").Range("A" & ºX).Value = ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A" & ºX - 1).Value + 1
+    End If
+Next
+
+
+
+'TESTE VELOCIDADE DE VENDA
+For ºP = 901 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(950, 2).End(xlUp).Row
+    ºPerfil_ = ThisWorkbook.Sheets("BD_CAD_VND").Range("A" & ºP).Value
+    If Application.IfError(Application.Match(ºPerfil_, ThisWorkbook.Sheets("BD_CAD_VND").Range("N3:N33")), 0) <> 0 Or Application.IfError(Application.Match(ºPerfil_, ThisWorkbook.Sheets("BD_CAD_VND").Range("H35:H55")), 0) <> 0 Then
+        ºV = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfil_ + 900, 3).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B57:B105"), 0), 0)
+        ºPercent_TOT = 0
+        For ºC = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºV + 56, Columns.Count).End(xlToLeft).Column Step 3
+            If Len(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºV + 56, ºC).Text, "%", "")) Then
+                ºPercent = Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºV + 56, ºC).Text, "%", "") / 100
+            Else
+                ºPercent = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºV + 56, ºC).Value
+            End If
+            ºPercent_TOT = ºPercent_TOT + ºPercent
+        Next
+        If ºPercent_TOT > 1 Then
+            ThisWorkbook.Sheets("Capa Viabilidade").Range("AA47").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("AA47").Value & " Curva de venda do perfil """ & ºPerfil_ & """ esta acima de 100% |"
+        End If
+    End If
+Next
+ThisWorkbook.Sheets("BD_TBL_REC").Range(Cells(4, 2).Address & ":" & Cells(ºL + 30, ºU).Address).FormulaR1C1 = "=R1048576C*BD_TBL_VND!RC"
+ThisWorkbook.Sheets("BD_TBL_REC_JUR").Range(Cells(4, 2).Address & ":" & Cells(ºL + 30, ºU).Address).FormulaR1C1 = "=(OFFSET(BD_CAD_VND!R2C15,BD_TBL_REC!R1C,0)*BD_TBL_REC!R3C)*BD_TBL_JUR!RC"
+ThisWorkbook.Sheets("BD_TBL_REC").Range(Cells(1048575, 2).Address & ":" & Cells(1048575, ºU).Address).FormulaR1C1 = "=OFFSET(BD_CAD_VND!R2C17,BD_TBL_REC!R1C,0)*BD_TBL_REC!R3C"
+ThisWorkbook.Sheets("BD_TBL_REC").Range(Cells(1048576, 2).Address & ":" & Cells(1048576, ºU).Address).FormulaR1C1 = "=OFFSET(BD_CAD_VND!R2C15,BD_TBL_REC!R1C,0)*BD_TBL_REC!R3C"
+
+For ºTPLG = 3 To ºLinTPLG
+    'PERFIL
+    ºC = Application.Match("Perfil Venda", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value = "" Then Exit Function
+    ºPerfilTP = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("A901:A950"), 0), 0)
+    If ºPerfilTP = 0 Then Exit Function
+    'TABELA DE VENDAS
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value <> "" Then
+        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value) - 2)
+    ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value <> "" Then
+        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value) - 2)
+    Else
+        Exit Function
+    End If
+    'VELOCIDADE DE VENDAS
+    ºTblVel = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 3).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B57:B105"), 0), 0)
+    ºCOLBD = ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column - 2) / 3) - 1
+        
+    ReDim ºVelocidades(ºCOLBD, 2)
+    For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column Step 3
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+            'inicio
+            ºVelocidades((ºCOLBD - 3) / 3, 0) = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0)
+            '%de Venda
+            ºVelocidades((ºCOLBD - 3) / 3, 1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value
+            'Duração
+            ºVelocidades((ºCOLBD - 3) / 3, 2) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 1).Value
+        End If
+    Next
+    ºVelocidades = BubbleSort(ºVelocidades, 0, 2)
+    ºInicioVnd = ºVelocidades(0, 0)
+    ºNcol = 0
+    For ºCOLBD = 0 To UBound(ºVelocidades)
+        ºVel_Ini = ºVelocidades(ºCOLBD, 0)
+        If ºNcol < ºVelocidades(ºCOLBD, 2) + ºVel_Ini - ºInicioVnd Then
+            ºNcol = CDbl(ºVelocidades(ºCOLBD, 2)) + CDbl(ºVel_Ini) - CDbl(ºInicioVnd)
+        End If
+    Next
+    
+    For ºC_TBL = 3 To 172 Step 9
+        ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL).Value
+        If ºTipo = "9" Then
+            ºFimChaves = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 8).Value
+        End If
+    Next
+    
+    ºC = Application.Match("Unidades", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    ºUNIDADES = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    
+    ºC = Application.Match("Permutas", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    ºPERMUTAS = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    
+    ºC = Application.Match("Area Privativa Coberta", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    ºAREA_PVT_COB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    
+    ºC = Application.Match("Area Privativa Descoberta", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    ºAREA_PVT_DESCOB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    
+    ºC = Application.Match("Fator", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    ºFATOR_DESCOB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    
+    ºC = Application.Match("Preço do m² Privativo Coberto", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+    ºVLR_M_COB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    
+    ºVgv = (ºUNIDADES - ºPERMUTAS) * ºAREA_PVT_COB * ºVLR_M_COB
+    ºPercent_TOT = 0
+    For ºCOLBD = 0 To UBound(ºVelocidades)
+        If ºVelocidades(ºCOLBD, 1) <> "" Then
+            If Application.IfError(Application.Search("%", ºVelocidades(ºCOLBD, 1)), 0) Then
+                ºPercent = Replace(ºVelocidades(ºCOLBD, 1), "%", "") / 100
+            Else
+                ºPercent = ºVelocidades(ºCOLBD, 1)
+            End If
+            ºPeriodos = ºVelocidades(ºCOLBD, 2)
+            ºINICIO = ºVelocidades(ºCOLBD, 0)
+            For ºC = 1 To ºU
+                If ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, ºC).Value = ºTPLG - 2 Then
+                    If ThisWorkbook.Sheets("BD_TBL_REC").Cells(2, ºC).Value >= ºINICIO And ThisWorkbook.Sheets("BD_TBL_REC").Cells(2, ºC).Value < ºINICIO + ºPeriodos Then
+                        ThisWorkbook.Sheets("BD_TBL_REC").Cells(3, ºC).Value = ºPercent / ºPeriodos
+                        ThisWorkbook.Sheets("BD_TBL_REC_JUR").Cells(3, ºC).Value = ºPercent / ºPeriodos
+                        ºA_Vend = ThisWorkbook.Sheets("BD_CAD_VND").Range("C490").Value
+                        If ºA_Vend = "Primeira Venda" Then ThisWorkbook.Sheets("BD_TBL_DEFLA").Cells(3, ºC).FormulaR1C1 = "=OFFSET(BD_TBL_FIN_R!R2C1,0,MATCH(R1C,BD_TBL_FIN_R!R1,0)-1,1,1)"
+                        If ºA_Vend = "Primeira Venda" Then ThisWorkbook.Sheets("BD_TBL_DEFLA_CMM").Cells(3, ºC).FormulaR1C1 = "=OFFSET(BD_TBL_FIN_R!R2C1,0,MATCH(R1C,BD_TBL_FIN_R!R1,0)-1,1,1)"
+                        For ºX = 4 To ºL + 30 Step 1
+                            If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+                                ThisWorkbook.Sheets("BD_TBL_FIN_R").Cells(ºX + PZ_LIBERACAO, ºC).FormulaR1C1 = "=BD_TBL_REC!R1048576C*BD_TBL_FIN!RC"
+                                ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(ºX + 1, ºC).FormulaR1C1 = "=IF(OR(SUM(BD_TBL_FIN_R!R4C:R[-1]C)=0,R2C+" & PZ_LIBERACAO & ">=RC1),0,(SUM(BD_TBL_FIN_R!R4C:R[-1]C)-(BD_TBL_REC!R1048575C*" & ºFraçãoT & "))*SUM(OFFSET(R4C16373,0,MATCH(R1C,R1C16374:R1C16384,0),COUNTIF(R4C1:RC1,""<>"")))-SUM(R3C:R[-1]C))"
+                                If ºA_Vend = "Venda da Unidade" Then
+                                    ºF_ini_defla = "RC1-R2C"
+                                ElseIf ºA_Vend = "Primeira Venda" Then
+                                    ºF_ini_defla = "RC1-R3C"
+                                ElseIf ºA_Vend = "Inicio do Repasse" Then
+                                    ºF_ini_defla = "RC1-R2C-" & ºPZ_DOC
+                                End If
+                                If ºA_Vend = "Primeira Venda" Then ThisWorkbook.Sheets("BD_TBL_DEFLA_CMM").Cells(ºX, ºC).FormulaR1C1 = "=-IF(AND(R2C>RC1,RC[-1]>0),0,((1+" & PRCT_DEFLA & ")^((" & ºF_ini_defla & ")/12)-1))*(BD_TBL_FIN_R!R[1]C)*IF(IF(AND(R2C[1]>R[1]C1,R[1]C>0),0,((1+0.07)^((R[1]C1-R3C[1])/12)-1))*(BD_TBL_FIN_R!R[2]C[1])<>0,1,0)"
+                                ThisWorkbook.Sheets("BD_TBL_DEFLA").Cells(ºX, ºC).FormulaR1C1 = "=-IF(AND(R2C>RC1,RC[-1]>0),0,((1+" & PRCT_DEFLA & ")^((" & ºF_ini_defla & ")/12)-1))*(BD_TBL_DESEMBOLSO!RC+BD_TBL_TERRENO!RC)"
+                                ThisWorkbook.Sheets("BD_TBL_TERRENO").Cells(ºX, ºC).FormulaR1C1 = "=IF(OR(SUM(BD_TBL_FIN_R!R[-1]C:R4C)=0,R2C+" & PZ_LIBERACAO & ">=RC1),0,(BD_TBL_REC!R1048575C*" & ºFraçãoT & "))-SUM(R3C:R[-1]C)"
+                            End If
+                        Next
+                    End If
+                End If
+            Next
+        End If
+    Next
+Next
+ThisWorkbook.Sheets("BD_TBL_REC").Calculate
+CurvaRec = "ok"
+ºLinTPLG = ThisWorkbook.Sheets("BD_CAD_VND").Cells(55, 3).End(xlUp).Row
+If ºLinTPLG < 35 Then Exit Function
+CurvaRec = "erro"
+For ºTPLG = 35 To ºLinTPLG
+    'PERFIL
+    ºC = Application.Match("Perfil Venda", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value = "" Then Exit Function
+    ºPerfilTP = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("A901:A950"), 0), 0)
+    If ºPerfilTP = 0 Then Exit Function
+    'TABELA DE VENDAS
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value <> "" Then
+        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value) - 2)
+    ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value <> "" Then
+        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value) - 2)
+    Else
+        Exit Function
+    End If
+    'VELOCIDADE DE VENDAS
+    ºTblVel = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 3).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B57:B105"), 0), 0)
+    ºCOLBD = ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column - 2) / 3) - 1
+        
+    ReDim ºVelocidades(ºCOLBD, 2)
+    For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column Step 3
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+            'inicio
+            ºVelocidades((ºCOLBD - 3) / 3, 0) = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0)
+            '%de Venda
+            ºVelocidades((ºCOLBD - 3) / 3, 1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value
+            'Duração
+            ºVelocidades((ºCOLBD - 3) / 3, 2) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 1).Value
+        End If
+    Next
+    ºVelocidades = BubbleSort(ºVelocidades, 0, 2)
+    ºInicioVnd = ºVelocidades(0, 0)
+    ºNcol = 0
+    For ºCOLBD = 0 To UBound(ºVelocidades)
+        ºVel_Ini = ºVelocidades(ºCOLBD, 0)
+        If ºNcol < ºVelocidades(ºCOLBD, 2) + ºVel_Ini - ºInicioVnd Then
+            ºNcol = CDbl(ºVelocidades(ºCOLBD, 2)) + CDbl(ºVel_Ini) - CDbl(ºInicioVnd)
+        End If
+    Next
+    
+    For ºC_TBL = 3 To 172 Step 9
+        ºTipo = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL).Value
+        If ºTipo = "9" Then
+            ºFimChaves = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVnd + 107, ºC_TBL + 8).Value
+        End If
+    Next
+    
+    ºC = Application.Match("Unidades", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+    ºUNIDADES = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    
+    ºC = Application.Match("Permutas", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+    ºPERMUTAS = 0
+    
+    ºC = Application.Match("Area Privativa Coberta", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+    ºAREA_PVT_COB = 1
+    
+    ºC = Application.Match("Area Privativa Descoberta", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+    ºAREA_PVT_DESCOB = 0
+    
+    ºC = Application.Match("Fator", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+    ºFATOR_DESCOB = 0
+    
+    ºC = Application.Match("Preço do M²", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+    ºVLR_M_COB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+    
+    ºVgv = (ºUNIDADES - ºPERMUTAS) * ºAREA_PVT_COB * ºVLR_M_COB
+    For ºCOLBD = 0 To UBound(ºVelocidades)
+        If ºVelocidades(ºCOLBD, 1) <> "" Then
+            If Application.IfError(Application.Search("%", ºVelocidades(ºCOLBD, 1)), 0) Then
+                ºPercent = Replace(ºVelocidades(ºCOLBD, 1), "%", "") / 100
+            Else
+                ºPercent = ºVelocidades(ºCOLBD, 1)
+            End If
+            ºPeriodos = ºVelocidades(ºCOLBD, 2)
+            ºINICIO = ºVelocidades(ºCOLBD, 0)
+            For ºC = 1 To ºU
+                If ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, ºC).Value = ºTPLG - 2 Then
+                    If ThisWorkbook.Sheets("BD_TBL_REC").Cells(2, ºC).Value >= ºINICIO And ThisWorkbook.Sheets("BD_TBL_REC").Cells(2, ºC).Value < ºINICIO + ºPeriodos Then
+                        ThisWorkbook.Sheets("BD_TBL_REC").Cells(3, ºC).Value = ºPercent / ºPeriodos
+                        ThisWorkbook.Sheets("BD_TBL_REC_JUR").Cells(3, ºC).Value = ºPercent / ºPeriodos
+                        ThisWorkbook.Sheets("BD_TBL_REC").Cells(1048575, ºC).FormulaR1C1 = "=OFFSET(BD_CAD_VND!R2C6,BD_TBL_REC!R1C,0)*BD_TBL_REC!R3C"
+                        ThisWorkbook.Sheets("BD_TBL_REC").Cells(1048576, ºC).FormulaR1C1 = "=OFFSET(BD_CAD_VND!R2C7,BD_TBL_REC!R1C,0)*BD_TBL_REC!R3C"
+                        ºA_Vend = ThisWorkbook.Sheets("BD_CAD_VND").Range("C490").Value
+                        If ºA_Vend = "Primeira Venda" Then ThisWorkbook.Sheets("BD_TBL_DEFLA").Cells(3, ºC).FormulaR1C1 = "=OFFSET(BD_TBL_FIN_R!R2C1,0,MATCH(R1C,BD_TBL_FIN_R!R1,0)-1,1,1)"
+                        If ºA_Vend = "Primeira Venda" Then ThisWorkbook.Sheets("BD_TBL_DEFLA_CMM").Cells(3, ºC).FormulaR1C1 = "=OFFSET(BD_TBL_FIN_R!R2C1,0,MATCH(R1C,BD_TBL_FIN_R!R1,0)-1,1,1)"
+                        For ºX = 4 To ºL + 30 Step 1
+                            ThisWorkbook.Sheets("BD_TBL_REC").Cells(ºX, ºC).FormulaR1C1 = "=R1048576C*BD_TBL_VND!RC"
+                            ThisWorkbook.Sheets("BD_TBL_REC_JUR").Cells(ºX, ºC).FormulaR1C1 = "=(OFFSET(BD_CAD_VND!R2C15,BD_TBL_REC!R1C,0)*BD_TBL_REC!R3C)*BD_TBL_JUR!RC"
+                            If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+                                ThisWorkbook.Sheets("BD_TBL_FIN_R").Cells(ºX + PZ_LIBERACAO, ºC).FormulaR1C1 = "=BD_TBL_REC!R1048576C*BD_TBL_FIN!RC"
+                                ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(ºX + 1, ºC).FormulaR1C1 = "=IF(OR(SUM(BD_TBL_FIN_R!R4C:R[-1]C)=0,R2C+" & PZ_LIBERACAO & ">=RC1),0,(SUM(BD_TBL_FIN_R!R4C:R[-1]C)-(BD_TBL_REC!R1048575C*" & ºFraçãoT & "))*SUM(OFFSET(R4C16373,0,MATCH(R1C,R1C16374:R1C16384,0),COUNTIF(R4C1:RC1,""<>"")))-SUM(R3C:R[-1]C))"
+                                If ºA_Vend = "Venda da Unidade" Then
+                                    ºF_ini_defla = "RC1-R2C"
+                                ElseIf ºA_Vend = "Primeira Venda" Then
+                                    ºF_ini_defla = "RC1-R3C"
+                                ElseIf ºA_Vend = "Inicio do Repasse" Then
+                                    ºF_ini_defla = "RC1-R2C-" & ºPZ_DOC
+                                End If
+                                If ºA_Vend = "Primeira Venda" Then ThisWorkbook.Sheets("BD_TBL_DEFLA_CMM").Cells(ºX, ºC).FormulaR1C1 = "=-IF(AND(R2C>RC1,RC[-1]>0),0,((1+" & PRCT_DEFLA & ")^((" & ºF_ini_defla & ")/12)-1))*(BD_TBL_FIN_R!R[1]C)*IF(IF(AND(R2C[1]>R[1]C1,R[1]C>0),0,((1+0.07)^((R[1]C1-R3C[1])/12)-1))*(BD_TBL_FIN_R!R[2]C[1])<>0,1,0)"
+                                ThisWorkbook.Sheets("BD_TBL_DEFLA").Cells(ºX, ºC).FormulaR1C1 = "=-IF(AND(R2C>RC1,RC[-1]>0),0,((1+" & PRCT_DEFLA & ")^((" & ºF_ini_defla & ")/12)-1))*(BD_TBL_DESEMBOLSO!RC+BD_TBL_TERRENO!RC)"
+                                ThisWorkbook.Sheets("BD_TBL_TERRENO").Cells(ºX, ºC).FormulaR1C1 = "=IF(OR(SUM(BD_TBL_FIN_R!R[-1]C:R4C)=0,R2C+" & PZ_LIBERACAO & ">=RC1),0,(BD_TBL_REC!R1048575C*" & ºFraçãoT & "))-SUM(R3C:R[-1]C)"
+                            End If
+                        Next
+                    End If
+                End If
+            Next
+        End If
+    Next
+Next
+CurvaRec = "ok"
+End Function
+
+Sub CARREGAR_FLUXO()
+Application.ScreenUpdating = False
+Application.DisplayAlerts = False
+Dim ºC As Integer
+Dim ºL_T, ºN As Double
+    DoEvents
+    If Criar_Tabela = "erro" Or CurvaRec = "erro" Then Exit Sub
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value = ""
+    Call Cont_Area_PVT(1)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value <> "" And ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value > 0 Then
+        Call gerar_fluxo
+        Call SENSIBILIDADE
+        Call CALCULAR_INFO_CAPA
+    End If
+Application.DisplayAlerts = True
+ 
+End Sub
+
+Private Function TaxaMes()
+'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Function
+
+    Dim ºC, ºLinTBL, ºL, ºLinPerfis As Integer
+    Dim ºTaxaAno As Double
+    Dim a As String
+    ºC = Application.Match("Taxa VP", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+    ºLinPerfis = ThisWorkbook.Sheets("BD_CAD_VND").Cells(208, 2).End(xlUp).Row
+    ºLinTBL = 4
+    For ºL = 159 To ºLinPerfis
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºL).Value Then
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Text = "" Then
+                ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value = 0
+            End If
+            ºTaxaAno = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Text, "%", "")) / 100
+            Exit For
+        End If
+    Next
+    TaxaMes = (1 + ºTaxaAno) ^ (1 / 12) - 1
+End Function
+
+
+Sub gerar_fluxo()
+'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Sub
+
+Dim ºVisible As Boolean
+Dim ºData As Date
+Dim a As Variant
+Dim ºLinPerfis, ºL_FLX, ºL_INI, ºLinTPLGVG, ºVGV_TOTAL, ºTerrenoVP, ºFraçãoT, ºI, ºLC, ºC, ºVALORCURVA, ºTX_ADM_Ger, ºTX_ADM_EXT As Double
+Dim ºCUSTO_ACUMULADO, ºTX_DTAS As Double
+Dim ºColunas_R_J, ºL_R_J_total, ºL, ºU, ºR, ºPZ_ULTIMA, ºPZ_DOC, ºcULUNASvND, ºLiberação, ºLinC_Obras, ºFASE, ºC_TOT_ANT, ºColunaLançamento As Integer
+Dim ºCURVA, ºDT_OBRA, ºLCC, ºLL, ºPZ_LIBERACAO, ºC_COL, ºINICIO_DTAS, ºDURAÇÃO_DTAS, ºLDTAS As Integer
+Dim ºFormula, ºFORMULA_ANT As String
+Dim ºOK As Boolean
+'On Error GoTo fim
+Calculate
+Application.Calculation = xlCalculationManual
+Application.ScreenUpdating = False
+Dim ºLinTPLG, ºLinTBL, ºTaxaMes, ºLASTCOL, ºLASTCOL_2, ºLINHASFLUXO, ºPERF As Double
+    a = checarDatas
+    ºLINHASFLUXO = ºMaiorINDICE
+    ºData = DateValue(ºDATA_BASE_FLX)
+    
+    If ThisWorkbook.Sheets("Fluxo Operacional").UsedRange.Columns.Count > 4 Then
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(5).Address & ":" & Columns(ThisWorkbook.Sheets("Fluxo Operacional").UsedRange.Columns.Count).Address).Delete
+    End If
+    
+    If ºLINHASFLUXO > 6 Then
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(6 & ":" & ºLINHASFLUXO).Delete
+    End If
+    ºLinPerfis = ThisWorkbook.Sheets("BD_CAD_VND").Cells(208, 3).End(xlUp).Row
+    For ºPERF = 159 To ºLinPerfis
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºPERF).Value Then
+            Exit For
+        End If
+    Next
+    ºColunas_R_J = ThisWorkbook.Sheets("BD_TBL_REC").Cells(4, Columns.Count).End(xlToLeft).Column
+    ºL_R_J_total = ThisWorkbook.Sheets("BD_TBL_REC").UsedRange.Rows.Count
+    For ºL_FLX = 6 To ºLINHASFLUXO
+        If ThisWorkbook.Sheets("Fluxo Operacional").Range("B" & ºL_FLX).Value = 0 Then
+            ºL_INI = ºL_FLX
+            Exit For
+        End If
+    Next
+    For ºL = 6 To ºLINHASFLUXO
+        ThisWorkbook.Sheets("Fluxo Operacional").Range("B" & ºL).Value = ºMenorINDICE + ºL - 6
+        ThisWorkbook.Sheets("Fluxo Operacional").Range("C" & ºL).Value = Application.EDate(ºData, ThisWorkbook.Sheets("Fluxo Operacional").Range("B" & ºL).Value)
+        ThisWorkbook.Sheets("Fluxo Operacional").Range("C" & ºL).NumberFormat = "mm/yyyy"
+    Next
+    ºLinTPLG = ThisWorkbook.Sheets("BD_CAD_VND").Cells(33, 3).End(xlUp).Row
+    ºLinTPLGVG = ThisWorkbook.Sheets("BD_CAD_VND").Cells(55, 3).End(xlUp).Row
+    ºLinPerfis = ThisWorkbook.Sheets("BD_CAD_VND").Cells(208, 3).End(xlUp).Row
+
+    'TAXA VP
+    ºTaxaMes = TaxaMes
+    
+    ºL = ThisWorkbook.Sheets("BD_TBL_VND").Cells(Rows.Count, 1).End(xlUp).Row
+    ºU = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+    ThisWorkbook.Sheets("BD_TBL_VND").Range("C498:D517").ClearContents
+    
+    '______________________________________________________________________________________________________________
+    ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// VENDAS \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    
+    ºLASTCOL = CONTABILIZARVENDAS
+    ºLASTCOL = Lançamentos_Manuais("OUTRAS RECEITAS", ºLASTCOL, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+    If ºLASTCOL > 1 Then
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// COMISSÃO DIRETA \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºLASTCOL = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        Call COMISSÃODIRETA(ºLASTCOL, ºLINHASFLUXO, ºPERF)
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// CREDITO ASSOCIATIVO \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+            ºLASTCOL = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column
+            ºR = Application.Match("ºAS_PZ_ULTIMA", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            ºPZ_ULTIMA = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+            ºR = Application.Match("ºAS_PZ_DOC", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            ºPZ_DOC = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+            
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 1).Value = "REPASSE TERRENO"
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 2).Value = "DESEMBOLSO ASSOCIATIVO"
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 3).Value = "DEFLAÇÃO"
+            
+            ºcULUNASvND = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+            ºFraçãoT = Replace(ºTerrenoVP / Application.SumProduct(ThisWorkbook.Sheets("BD_CAD_VND").Range("Q3:Q32")), ",", ".")
+            For ºL = 4 To ThisWorkbook.Sheets("BD_TBL_FIN_R").Cells(Rows.Count, 1).End(xlUp).Row
+                If Application.Sum(ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("B" & ºL & ":XFD" & ºL)) > 0 Then
+                    ºLiberação = ThisWorkbook.Sheets("BD_TBL_FIN_R").Range("A" & ºL).Value
+                    Exit For
+                End If
+            Next
+            
+            ºLinC_Obras = ThisWorkbook.Sheets("BD_CAD_VND").Cells(259, 3).End(xlUp).Row
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºLASTCOL + 1).Address & ":" & Cells(ºLINHASFLUXO, ºLASTCOL + 3).Address).FormulaR1C1 = "=0"
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, Columns.Count - 9).Address & ":" & Cells(ºLINHASFLUXO, Columns.Count).Address).FormulaR1C1 = "=0"
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, Columns.Count - 10 + ºFASE - 209).FormulaR1C1 = "=0"
+            
+            'For ºFASE = 210 To ºLinC_Obras Step 1
+                For ºL = 8 To ºLINHASFLUXO
+                    If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, 2).Value > ºLiberação Then
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 1).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 1).FormulaR1C1 & "+IFERROR(SUM(INDIRECT(""BD_TBL_TERRENO!$B""&MATCH(RC2,BD_TBL_TERRENO!C1,0)&"":$XFD"" & MATCH(RC2,BD_TBL_TERRENO!C1,0))),0)"
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 2).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 2).FormulaR1C1 & "+IFERROR(SUM(INDIRECT(""BD_TBL_DESEMBOLSO!$B""&MATCH(RC2,BD_TBL_DESEMBOLSO!C1,0)&"":$XFD"" & MATCH(RC2,BD_TBL_DESEMBOLSO!C1,0))),0)"
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 3).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 3).FormulaR1C1 & "+IFERROR(SUM(INDIRECT(""BD_TBL_DEFLA!$B""&MATCH(RC2,BD_TBL_DEFLA!C1,0)&"":$XFD"" & MATCH(RC2,BD_TBL_DEFLA!C1,0))),0)"
+                    Else
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 1).Value = 0
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 2).Value = 0
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 3).Value = 0
+                    End If
+                Next
+            'Next
+            
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 1))
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 2))
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 3))
+            ºLASTCOL = ºLASTCOL + 3
+        End If
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// RECEITA TOTAL \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºFormula = "=("
+        For ºI = 5 To ºLASTCOL
+            If Application.IfError(Application.Search("UNIDADES", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºI).Value), 0) = 0 Then
+                ºFormula = ºFormula & "+RC" & ºI
+            End If
+        Next
+        ºFormula = ºFormula & ")"
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 1).Value = "RECEITA TOTAL"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 1))
+        For ºL = 6 To ºLINHASFLUXO
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL + 1).FormulaR1C1 = ºFormula
+        Next
+        ThisWorkbook.Sheets("Fluxo Operacional").Range("E2:" & Cells(2, ºLASTCOL + 1).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range("E2:" & Cells(2, ºLASTCOL + 1).Address).HorizontalAlignment = xlCenter
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range("E2:" & Cells(2, ºLASTCOL + 1).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range("E5:" & Cells(5, ºLASTCOL + 1).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range("E2").Value = "RECEITA"
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range("E2:" & Cells(ºLINHASFLUXO, ºLASTCOL + 1).Address))
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºLASTCOL + 1).Address & ":" & Cells(ºLINHASFLUXO, ºLASTCOL + 1).Address))
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range("E2:" & Cells(2, ºLASTCOL + 1).Address))
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range("E5:" & Cells(5, ºLASTCOL + 1).Address))
+        
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(5).Address & ":" & Columns(ºLASTCOL).Address).Group
+       
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// IMPOSTOS \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºLASTCOL_2 = CONTABIMPOSTOS(ºC_TOT_ANT, ºLINHASFLUXO, ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºColunaLançamento = ºLASTCOL_2
+        ºC_TOT_ANT = Application.Match("RECEITA TOTAL", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºLASTCOL_2 - 2).Address).Group
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// TERRENO  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºC_TOT_ANT = Application.Match("TOTAL IMPOSTOS ", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        Call LCTO_TERRENOS(ºC_TOT_ANT, ºLINHASFLUXO, ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºC_TOT_ANT = Application.Match("TOTAL IMPOSTOS ", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(Application.Match("TOTAL PEP 1", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) - 1).Address).Group
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// OBRA  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºC_TOT_ANT = Application.Match("TOTAL PEP 1", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        ºColunaLançamento = ºC_TOT_ANT
+        ºLinC_Obras = ThisWorkbook.Sheets("BD_CAD_VND").Cells(259, 3).End(xlUp).Row
+        For ºFASE = 210 To ºLinC_Obras Step 1
+            ºC = Application.Match("Curva", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ºCURVA = 1 + ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Value
+            ºC = Application.Match("VALOR CURVA", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ºVALORCURVA = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Value
+            ºC = Application.Match("Taxa adm ger", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ºTX_ADM_Ger = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Text, "%", "")) / 100
+            ºC = Application.Match("Taxa adm ext", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ºTX_ADM_EXT = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Text, "%", "")) / 100
+            ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(1, Columns.Count - 10 + ºFASE - 209).Value = ºFASE - 209
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento + ((ºFASE - 210) * 4)).Value = "CURVA F" & ºFASE - 209 & " " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºCURVA).Value & " (%)"
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento + ((ºFASE - 210) * 4) + 1).Value = "CUSTO RASO F" & ºFASE - 209 & " " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºCURVA).Value & " (R$)"
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento + ((ºFASE - 210) * 4) + 2).Value = "TAXA ADM. GERENCIAL F" & ºFASE - 209 & " " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºCURVA).Value & " (R$)"
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento + ((ºFASE - 210) * 4) + 3).Value = "TAXA ADM. EFETIVA F" & ºFASE - 209 & " " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºCURVA).Value & " (R$)"
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºColunaLançamento + ((ºFASE - 210) * 4)).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento + ((ºFASE - 210) * 4)).Address).Value = 0
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºColunaLançamento + ((ºFASE - 210) * 4) + 1).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento + ((ºFASE - 210) * 4) + 1).Address).Value = 0
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºColunaLançamento + ((ºFASE - 210) * 4) + 2).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento + ((ºFASE - 210) * 4) + 2).Address).Value = 0
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºColunaLançamento + ((ºFASE - 210) * 4) + 3).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento + ((ºFASE - 210) * 4) + 3).Address).Value = 0
+            ºFORMULA_ANT = ""
+            ºCUSTO_ACUMULADO = 0
+            ºDT_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, 11).Value, 0)
+            For ºLCC = 262 To 460 Step 1
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC, ºCURVA).Value <> "" Then
+                    For ºLL = 6 To ºLINHASFLUXO Step 1
+                        If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, 2).Value >= ºDT_OBRA + ºLCC - 262 Then
+                            '% de liberação
+                            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento + ((ºFASE - 210) * 4)).Value = Sqr(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC, ºCURVA).Value ^ 2) * -1
+                            'CUSTO RASO
+                            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento + ((ºFASE - 210) * 4) + 1).FormulaR1C1 = "=SUMIF(BD_CAD_VND!R210C2:R259C2,VALUE(MID(R5C,SEARCH(""F"",R5C)+1,2)),BD_CAD_VND!R210C15:R259C15)*RC[-1]"
+                            'TAXA ADM GERENCIAL
+                            If ºTX_ADM_Ger <> 0 Then ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento + ((ºFASE - 210) * 4) + 2).FormulaR1C1 = "=-" & Replace(ºTX_ADM_Ger, ",", ".") & "*RC[-2]*R4C[-1]"
+                            'TAXA ADM EXTERNA
+                            If ºTX_ADM_EXT <> 0 Then ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento + ((ºFASE - 210) * 4) + 3).FormulaR1C1 = "=-" & Replace(ºTX_ADM_EXT, ",", ".") & "*RC[-3]*R4C[-2]"
+                            Exit For
+                        End If
+                    Next
+                    ' CRÉDITO ASSOCIATIVO
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+                        ºR = Application.Match("ºAS_PZ_ULTIMA", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                        ºPZ_ULTIMA = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+                        ºCUSTO_ACUMULADO = ºCUSTO_ACUMULADO + Sqr(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC, ºCURVA).Value ^ 2) * -1
+                        ºR = Application.Match("ºAS_PZ_LIBERACAO", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                        ºPZ_LIBERACAO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+                        ºcULUNASvND = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+                        ºFraçãoT = Replace(ºTerrenoVP / Application.SumProduct(ThisWorkbook.Sheets("BD_CAD_VND").Range("Q3:Q32")), ",", ".")
+                        ºR = Application.Match(ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, 2).Value + 1, ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Columns(1), 0)
+                        If ºCUSTO_ACUMULADO > -0.950000001 Then
+                            ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(ºR, Columns.Count - 10 + ºFASE - 209).Value = Sqr(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC, ºCURVA).Value ^ 2)
+                            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºR, Columns.Count - 20 + ºFASE - 209).Value = Sqr(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC, ºCURVA).Value ^ 2)
+                            ºOK = True
+                        ElseIf ºOK Then
+                            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC + 1, ºCURVA).Value = "" Then
+                                'ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(ºR - 1, Columns.Count - 10 + ºFASE - 209).Value = _
+                                'ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(ºR - 1, Columns.Count - 10 + ºFASE - 209).Value + (0.95 - Application.Sum(ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range(Cells(4, Columns.Count - 10 + ºFASE - 209).Address & ":" & Cells(ºR - 1, Columns.Count - 10 + ºFASE - 209).Address)))
+                                'ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºR - 1, Columns.Count - 20 + ºFASE - 209).Value = _
+                                'ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºR - 1, Columns.Count - 20 + ºFASE - 209).Value + (0.95 - Application.Sum(ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range(Cells(4, Columns.Count - 20 + ºFASE - 209).Address & ":" & Cells(ºR - 1, Columns.Count - 10 + ºFASE - 209).Address)))
+                                
+                                ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(ºR + ºPZ_ULTIMA, Columns.Count - 10 + ºFASE - 209).Value = Sqr(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC, ºCURVA).Value ^ 2)
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºR + ºPZ_ULTIMA, Columns.Count - 20 + ºFASE - 209).Value = Sqr(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC, ºCURVA).Value ^ 2)
+                            Else
+                                ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(ºR, Columns.Count - 10 + ºFASE - 209).Value = _
+                                0.95 - Application.Sum(ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range(Cells(4, Columns.Count - 10 + ºFASE - 209).Address & ":" & Cells(ºR, Columns.Count - 10 + ºFASE - 209).Address))
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºR, Columns.Count - 20 + ºFASE - 209).Value = _
+                                0.95 - Application.Sum(ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range(Cells(4, Columns.Count - 20 + ºFASE - 209).Address & ":" & Cells(ºR, Columns.Count - 10 + ºFASE - 209).Address))
+                            End If
+                            ºOK = False
+                        ElseIf ºCUSTO_ACUMULADO < -0.9999999 Or ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLCC + 1, ºCURVA).Value = "" Then
+                            ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Cells(ºR + ºPZ_ULTIMA, Columns.Count - 10 + ºFASE - 209).Value = 0.05
+                            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºR + ºPZ_ULTIMA, Columns.Count - 20 + ºFASE - 209).Value = 0.05
+                        End If
+                    End If
+                Else
+                    Exit For
+                End If
+            Next
+            For ºLL = 6 To ºLINHASFLUXO Step 1
+                If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, 2).Value = -1 Then
+                    ºFORMULA_ANT = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento + ((ºFASE - 210) * 4) + 1).FormulaR1C1
+                    ºFORMULA_ANT = Right(ºFORMULA_ANT, Len(ºFORMULA_ANT) - 1)
+                    If ºFORMULA_ANT <> "" Then
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento + ((ºFASE - 210) * 4) + 1).FormulaR1C1 = "=(" & ºFORMULA_ANT & ")+" & Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, 19).Value * -1, ",", ".")
+                    Else
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento + ((ºFASE - 210) * 4) + 1).FormulaR1C1 = "=" & Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, 19).Value * -1, ",", ".")
+                    End If
+                End If
+            Next
+        Next
+                
+        ºColunaLançamento = ºColunaLançamento + ((ºFASE - 210) * 4)
+        
+        'LANÇAMENTOS
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºColunaLançamento = Lançamentos_Manuais("3 OBRA", ºColunaLançamento, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 3 "
+        ºFormula = "=("
+        For ºC_COL = ºC_TOT_ANT To ºColunaLançamento - 1
+            If Application.IfError(Application.Search("CURVA F", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_COL).Value), 0) = 0 Then
+                ºFormula = ºFormula & "+RC" & ºC_COL
+            End If
+        Next
+        ºFormula = ºFormula & ")"
+        If ºFormula <> "=()" Then
+            For ºLL = 6 To ºLINHASFLUXO Step 1
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+            Next
+        Else
+            For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).Value = 0
+            Next
+        End If
+    
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+    
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "PEP 3 OBRA"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºColunaLançamento - 1).Address).Group
+        
+        '______________________________________________________________________________________________________________
+        ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// DTAS  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºC_TOT_ANT = Application.Match("TOTAL PEP 3 ", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT).Value = "MANUTENÇÃO DE OBRA (%) FASE 1"
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºC_TOT_ANT).Address).FormulaR1C1 = "=0"
+        
+        ºLinC_Obras = ThisWorkbook.Sheets("BD_CAD_VND").Cells(259, 3).End(xlUp).Row
+        For ºFASE = 211 To ºLinC_Obras Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT + ºFASE - 210).Value = "MANUTENÇÃO DE OBRA (%) FASE " & ºFASE - 209
+            For ºLL = 6 To ºLINHASFLUXO Step 1
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºC_TOT_ANT + ºFASE - 210).Value = 0
+            Next
+        Next
+        ºColunaLançamento = Lançamentos_Manuais("5 DTAS", ºColunaLançamento, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 5"
+        ºFormula = "=SUM(RC" & ºC_TOT_ANT & ":" & "RC" & ºColunaLançamento - 1 & ")"
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+    
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "PEP 5 DTAS"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºColunaLançamento - 1).Address).Group
+       
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// PEP 3.4 INCORPORAÇÃO  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºC_TOT_ANT = Application.Match("TOTAL PEP 5", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        Call LCTO_INCORPORAÇÃO(ºC_TOT_ANT, ºLINHASFLUXO, ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(Application.Match("TOTAL PEP 3.4", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) - 1).Address).Group
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// PEP 2 PROPAGANDA \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        
+        Dim ºTX_MKT, ºTX_PDV, ºTX_EB As Double
+        ºC_TOT_ANT = Application.Match("TOTAL PEP 3.4", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        
+        ºC = Application.Match("Marketing", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text <> "" Then ºTX_MKT = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100 * -1 Else ºTX_MKT = 0
+        ºC = Application.Match("PDV", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text <> "" Then ºTX_PDV = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100 * -1 Else ºTX_PDV = 0
+        ºC = Application.Match("E-Business", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text <> "" Then ºTX_EB = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100 * -1 Else ºTX_EB = 0
+        
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT).Value = "MARKETING % FASE 1"
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT + 1).Value = "PDV FASE 1"
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT + 2).Value = "E-BUSINESS FASE 1"
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºC_TOT_ANT).Address).FormulaR1C1 = "=0"
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC_TOT_ANT + 1).Address & ":" & Cells(ºLINHASFLUXO, ºC_TOT_ANT + 1).Address).FormulaR1C1 = "=0"
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC_TOT_ANT + 2).Address & ":" & Cells(ºLINHASFLUXO, ºC_TOT_ANT + 2).Address).FormulaR1C1 = "=0"
+        
+        ºColunaLançamento = Lançamentos_Manuais("2 PROPAGANDA", ºC_TOT_ANT, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 2"
+        ºFormula = "=SUM(RC" & ºC_TOT_ANT & ":" & "RC" & ºColunaLançamento - 1 & ")"
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+    
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "PEP 2 PROPAGANDA"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(Application.Match("TOTAL PEP 2", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) - 1).Address).Group
+       
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// PEP 6 COMERCIAL  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        Dim ºFORMULA_1, ºFORMULA_2, ºFORMULA_3 As String
+        Dim ºPRMT_FIS, ºTX_InDIR As Variant
+        ºC_TOT_ANT = Application.Match("TOTAL PEP 2", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        ºC = Application.Match("Comissão Indireta", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT).Value = "COMISSÃO INDIRETA"
+        
+        ºFORMULA_1 = "("
+        ºFORMULA_2 = "("
+        For ºI = 0 To ((ºLASTCOL - 5) / 4) - 1
+            ºFORMULA_1 = ºFORMULA_1 & "+RC" & 6 + (4 * ºI)
+            ºFORMULA_2 = ºFORMULA_2 & "+SUM(RC" & 7 + (4 * ºI) & ":RC" & 8 + (4 * ºI) & ")"
+        Next
+        ºFORMULA_3 = "SUM(R6C:R[-1]C)"
+        'Majorar Curva ?
+        ºR = Application.Match("ºMJ_CMSS", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value Then
+            ºPRMT_FIS = Application.Sum(ThisWorkbook.Sheets("BD_CAD_VND").Range("S3:S32")) / Application.Sum(ThisWorkbook.Sheets("BD_CAD_VND").Range("o3:o32"))
+        Else
+            ºPRMT_FIS = 0
+        End If
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text = "" Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Value = 0
+        ºTX_InDIR = Replace((CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100) * (1 + ºPRMT_FIS), ",", ".")
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("C490").Value = "Venda da Unidade" Or Not ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+            ºFormula = "=" & ºFORMULA_1 & ")*-" & ºTX_InDIR
+        Else
+            ºFormula = "=(" & ºFORMULA_1 & ")+IFERROR(SUM(INDIRECT(""BD_TBL_DEFLA_CMM!$B""&MATCH(RC2,BD_TBL_DEFLA_CMM!C1,0)&"":$XFD"" & MATCH(RC2,BD_TBL_DEFLA_CMM!C1,0))),0))*-" & ºTX_InDIR
+        End If
+        For ºL = 7 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºC_TOT_ANT).FormulaR1C1 = ºFormula
+        Next
+                
+        ºC_TOT_ANT = Application.Match("TOTAL PEP 2", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        ºColunaLançamento = Lançamentos_Manuais("6 COMERCIAL", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 6"
+        ºFormula = "=SUM(RC" & Application.Match("TOTAL PEP 2", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1 & ":" & "RC" & ºColunaLançamento - 1 & ")"
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+    
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "PEP 6 COMERCIAL"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºColunaLançamento - 1).Address).Group
+       '___________________________________________________________________________________________________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// PEP 8.3 DESPESAS CREDITO ASSOCIATIVO  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+            Dim ºC_TOT_RCT, ºC_TOT_MCMV, ºC_TERR_MCMV, ºCC As Integer
+            Dim TX_CONTRATO, TX_MD_OBRA, TX_SEG_OBRA As Double
+            
+            ºC_TOT_ANT = Application.Match("TOTAL PEP 6", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+            ºC_TOT_RCT = Application.Match("RECEITA TOTAL", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+            ºC_TOT_MCMV = Application.Match("DESEMBOLSO ASSOCIATIVO", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+            ºC_TERR_MCMV = Application.Match("REPASSE TERRENO", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+            
+            'EMISSÃO DE CONTRATO
+            ºR = Application.Match("ºAS_TX_CONTRATO", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            TX_CONTRATO = (ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value + 1) * -1 + 1
+            ºFormula = "=SUM(RC5"
+            For ºCC = 7 To ºC_TOT_RCT
+                If "UNIDADES " = Left(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºCC).Value, 9) Then
+                    ºFormula = ºFormula & ",RC" & ºCC
+                End If
+            Next
+            ºFormula = ºFormula & ")*" & Replace(TX_CONTRATO, ",", ".")
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT).Value = "EMISSÃO DE CONTRATO"
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT))
+            For ºL = 6 To ºLINHASFLUXO
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºC_TOT_ANT).FormulaR1C1 = ºFormula
+            Next
+            
+            'MEDIÇÃO DE OBRA
+            ºR = Application.Match("ºAS_TX_MD_OBRA", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            TX_MD_OBRA = Replace((ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value + 1) * -1 + 1, ",", ".")
+            ºFormula = "="
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT + 1).Value = "TAXA DE MEDIÇÃO"
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC_TOT_ANT + 1).Address & ":" & Cells(ºLINHASFLUXO, ºC_TOT_ANT + 1).Address).Value = 0
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT + 1))
+            Calculate
+            For ºFASE = 210 To ºLinC_Obras Step 1
+                For ºL = 6 To ºLINHASFLUXO
+                        If Application.Sum(ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range(Cells(4, Columns.Count - 10 + ºFASE - 209).Address & ":" & Cells(ºL - 2, Columns.Count - 10 + ºFASE - 209).Address)) <> 0 _
+                    And (Application.Sum(ThisWorkbook.Sheets("BD_TBL_DESEMBOLSO").Range(Cells(ºL - 1, Columns.Count - 10 + ºFASE - 209).Address & ":" & Cells(ºLINHASFLUXO, Columns.Count - 10 + ºFASE - 209).Address)) <> 0) Then
+                       ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºC_TOT_ANT + 1).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºC_TOT_ANT + 1) + TX_MD_OBRA
+                    End If
+                Next
+            Next
+            
+            'MEDIÇÃO DE OBRA
+            ºR = Application.Match("ºAS_PRCT_SEG_OBRA", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            TX_SEG_OBRA = Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value, "%", "") / 100
+            ºFormula = "="
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT + 2).Value = "SEGURO DE OBRA"
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC_TOT_ANT + 2).Address & ":" & Cells(ºLINHASFLUXO, ºC_TOT_ANT + 2).Address).Value = 0
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT + 2))
+            Calculate
+            For ºFASE = 210 To ºLinC_Obras Step 1
+                For ºC = 5 To ºC_TOT_ANT
+                    If Left(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value, Len("CURVA F" & ºFASE - 209)) = "CURVA F" & ºFASE - 209 Then
+                        Exit For
+                    End If
+                Next
+                For ºL = 6 To ºLINHASFLUXO
+                    If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºC).Value <> 0 Then
+                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºC_TOT_ANT + 2).FormulaR1C1 = "=R4C" & ºC + 1 & "*" & Replace(TX_SEG_OBRA, ",", ".")
+                        Exit For
+                    End If
+                Next
+            Next
+            
+            ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+            ºColunaLançamento = Lançamentos_Manuais("8.3 DESP. C/ FINANC. (CA)", ºColunaLançamento, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+            ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+            
+            
+            'TOTAL
+            '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+            
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 8.3"
+            ºFormula = "=SUM(RC" & ºC_TOT_ANT & ":RC" & ºColunaLançamento - 1 & ")"
+            For ºLL = 6 To ºLINHASFLUXO Step 1
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+            Next
+        
+            Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+            Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+            Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "PEP 8.3 DESPESAS CREDITO ASSOCIATIVO"
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+            Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºColunaLançamento - 1).Address).Group
+       End If
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// PEP  8 ADM. DE CARTEIRA  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        Dim ADM_P_UNID, ºTX_ADM As Double
+        'Majorar Curva ?
+        ºR = Application.Match("ºMJ_TX_ADM", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value Then
+            ºPRMT_FIS = Application.Sum(ThisWorkbook.Sheets("BD_CAD_VND").Range("S3:S32")) / Application.Sum(ThisWorkbook.Sheets("BD_CAD_VND").Range("o3:o32"))
+        Else
+            ºPRMT_FIS = 0
+        End If
+        
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+            ºC_TOT_ANT = Application.Match("TOTAL PEP 8.3", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+            ºC_TOT_RCT = Application.Match("RECEITA TOTAL", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+             
+            ºR = Application.Match("ºAS_ADM_P_UNID", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            ADM_P_UNID = (ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value + 1) * -1 + 1
+            ºFormula = "=SUM(RC5"
+            For ºCC = 7 To ºC_TOT_RCT
+                If "UNIDADES " = Left(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºCC).Value, 9) Then
+                    ºFormula = ºFormula & ",RC" & ºCC
+                End If
+            Next
+            ºFormula = ºFormula & ")*" & Replace(ADM_P_UNID, ",", ".")
+        Else
+            ºC_TOT_ANT = Application.Match("TOTAL PEP 6", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+            ºC_TOT_RCT = Application.Match("RECEITA TOTAL", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+             
+            ºC = Application.Match("ADM Carteira", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text = "" Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Value = 0
+            ºTX_ADM = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100 * -1
+            
+            ºFormula = "=RC" & ºC_TOT_RCT & "*" & Replace(ºTX_ADM * (1 + ºPRMT_FIS), ",", ".")
+        End If
+        
+        
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT).Value = "ADM. DE CARTEIRA"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT))
+        For ºL = 6 To ºLINHASFLUXO
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºC_TOT_ANT).FormulaR1C1 = ºFormula
+        Next
+        
+        ºColunaLançamento = Lançamentos_Manuais("8 ADM. DE CARTEIRA", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 8"
+        ºFormula = "=SUM(RC" & ºC_TOT_ANT & ":RC" & ºColunaLançamento - 1 & ")"
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+    
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "PEP  8 ADM. DE CARTEIRA"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºColunaLançamento - 1).Address).Group
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// PEP 4 RELACIONAMENTO  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºC_TOT_ANT = Application.Match("TOTAL PEP 8", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT).Value = "RELACIONAMENTO COM CLIENTE FASE 1"
+        
+        For ºL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºC_TOT_ANT).FormulaR1C1 = "=0"
+        Next
+        
+        'LANÇAMENTOS
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºColunaLançamento = Lançamentos_Manuais("4 RELACIONAMENTO", ºC_TOT_ANT, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 4 "
+        ºFormula = "=SUM(RC" & ºC_TOT_ANT & ":RC" & ºColunaLançamento - 1 & ")"
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+    
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "PEP 4 RELACIONAMENTO"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºColunaLançamento - 1).Address).Group
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// PARTICIPAÇÃO PERMUTA FÍSICA  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºColunaLançamento = Application.Match("TOTAL PEP 4 ", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        Dim ºTX_participação As String
+        'PARTICIPAÇÃO NOS CUSTOS E DESPESAS
+        ºR = Application.Match("ºP_FISICA", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text <> "" Then
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "PARTICIPAÇÃO CUSTOS E DESPESAS PERMUTA FÍSICA"
+            
+            For ºL = 6 To ºLINHASFLUXO Step 1
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºColunaLançamento).Value = 0
+            Next
+            ºTX_participação = Replace(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text, "%", "")) / 100, ",", ".")
+            If CDbl(ºTX_participação) > 0 Then
+            
+                ºPRMT_FIS = Replace(Application.Sum(ThisWorkbook.Sheets("BD_CAD_VND").Range("S3:S32")) / (Application.Sum(ThisWorkbook.Sheets("BD_CAD_VND").Range("o3:o32")) + Application.Sum(ThisWorkbook.Sheets("BD_CAD_VND").Range("S3:S32"))), ",", ".")
+                ºC_TOT_ANT = Application.Match("COMISSÃO DIRETA", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "REEMBOLSO CUSTOS E DESPESAS (FÍSICA)"
+                Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento))
+                ºFormula = ""
+                For ºC = 5 To ºC_TOT_ANT
+                    If Application.IfError(Application.Search("VGV UNIDADES F", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value), 0) <> 0 Then
+                        ºFormula = ºFormula & "+R[-1]C" & ºC
+                    End If
+                Next
+                ºFormula = "=(((" & ºFormula & ")*" & ºPRMT_FIS & ")*" & ºTX_participação & ")+(R[-1]C" & ºC_TOT_ANT & "*" & ºPRMT_FIS & ")"
+                For ºL = 7 To ºLINHASFLUXO
+                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºColunaLançamento).FormulaR1C1 = ºFormula
+                Next
+            End If
+            ºColunaLançamento = ºColunaLançamento + 1
+            'TOTAL
+            '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+            ºC_TOT_ANT = Application.Match("TOTAL PEP 4 ", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL OUTROS GASTOS"
+            ºFormula = "=SUM(RC" & ºC_TOT_ANT & ":RC" & ºColunaLançamento - 1 & ")"
+            For ºLL = 6 To ºLINHASFLUXO Step 1
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+            Next
+        
+            Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+            Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+            Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "OUTROS GASTOS"
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+            Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºColunaLançamento - 1).Address).Group
+        End If
+
+       
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// SALDO FINAL  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        Dim ºTaxaAno As Double
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "SALDO FINAL"
+        ºFormula = "=SUM(RC" & ºLASTCOL + 1
+        For ºCC = ºLASTCOL + 2 To ºColunaLançamento - 1
+            If Application.IfError(Application.Search("TOTAL", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºCC).Value), 0) > 0 Then
+                ºFormula = ºFormula & ",RC" & ºCC
+            End If
+        Next
+        ºFormula = ºFormula & ")"
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+        
+        'TAXA VP
+        ºC = Application.Match("Taxa VP", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+        ºLinTBL = 4
+        For ºL = 159 To ºLinPerfis
+            If ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºL).Value Then
+                ºTaxaAno = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Text, "%", "")) / 100
+                Exit For
+            End If
+        Next
+        ºTaxaMes = (1 + ºTaxaAno) ^ (1 / 12) - 1
+        If ºMenorINDICE >= 0 Then
+            ºFormula = "=NPV(" & Replace(ºTaxaMes, ",", ".") & ",R" & 6 + Abs(ºMenorINDICE) + 1 & "C:R[" & ºLINHASFLUXO & "]C)+R6c"
+        Else
+            ºFormula = "=NPV(" & Replace(ºTaxaMes, ",", ".") & ",R" & 6 + Abs(ºMenorINDICE) + 1 & "C:R[" & ºLINHASFLUXO & "]C)+SUM(R6C:R" & 6 + Abs(ºMenorINDICE) & "C)"
+        End If
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 5).Address & ":" & Cells(3, ºColunaLançamento).Address).FormulaR1C1 = ºFormula
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(4, 5).Address & ":" & Cells(4, ºColunaLançamento).Address).FormulaR1C1 = "=SUM(R6C:R[" & ºLINHASFLUXO & "]C)"
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, 5).Address & ":" & Cells(4, ºColunaLançamento).Address).NumberFormat = "#,##0"
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºColunaLançamento).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºColunaLançamento).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºColunaLançamento).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºColunaLançamento).Value = "RESULTADO"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºColunaLançamento).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºColunaLançamento).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// ANÁLISE INVESTIMENTO X RETORNO  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        Dim ºULT_COM_VAL As Double
+        Calculate
+        DoEvents
+        'SALDO ACUMULADO
+        ThisWorkbook.Sheets("Fluxo Operacional").Calculate
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "SALDO ACUMULADO"
+        ºFormula = "=IF(SUM(RC[-1]:R" & ºLINHASFLUXO & "C[-1])=0,0,SUM(R6C[-1]:RC[-1]))"
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(4, ºColunaLançamento).FormulaR1C1 = "=INDEX(R6C2:R[" & ºLINHASFLUXO & "]C2,MATCH(MIN(R6C:R" & ºLINHASFLUXO & "C),R6C:R" & ºLINHASFLUXO & "C,0))"
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, ºColunaLançamento).FormulaR1C1 = "=PV(" & Replace(ºTaxaMes, ",", ".") & ",R[1]C,0,MIN(R6C:R" & ºLINHASFLUXO & "C))"
+        
+        'INVESTIMENTO
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "INVESTIMENTO"
+        ºFormula = "=MIN(RC[-1]-SUM(R6C:R[-1]C),0)"
+        For ºLL = 7 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+        
+        'ACUMULADO APÓS INVESTIMENTO
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "ACUMULADO APÓS INVESTIMENTO"
+        ºFormula = "=IF(SUM(RC[-3]:R" & ºLINHASFLUXO & "C[-3])=0,0,RC[-2]-SUM(R6C[-1]:RC[-1]))"
+        For ºLL = 7 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+        
+        'RETORNO
+        For ºLL = 7 To ºLINHASFLUXO Step 1
+            If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).Value <> 0 Then
+                ºULT_COM_VAL = ºLL
+            End If
+        Next
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "RETORNO"
+        ºFormula = "=MIN(RC[-1]:R" & ºULT_COM_VAL & "C[-1])-SUM(R6C:R[-1]C)"
+        For ºLL = 7 To ºULT_COM_VAL Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, ºColunaLançamento).Value = "TIR(a.m.)"
+        
+        
+        'INVESTIMENTO X RETORNO
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "INVESTIMENTO X RETORNO"
+        ºFormula = "=RC[-3]+RC[-1]"
+        For ºLL = 7 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+        '" & ºL_INI + 1 & "
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(3, ºColunaLançamento).FormulaR1C1 = "=IRR(R6C:R[" & ºLINHASFLUXO & "]C,0)"
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(4, ºColunaLançamento).FormulaR1C1 = "=(1+R[-1]C)^12-1"
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ºC_TOT_ANT = Application.Match("SALDO FINAL", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0) + 1
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "ANÁLISE INVESTIMENTO X RETORNO"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(ºC_TOT_ANT).Address & ":" & Columns(ºColunaLançamento - 1).Address).Group
+       '______________________________________________________________________________________________________________
+       ' \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\// FINAL  \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+       '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        Call FormtPlan
+    End If
+    ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, Columns.Count - 20).Address & ":" & Cells(ºLINHASFLUXO, Columns.Count).Address).ClearContents
+
+    Application.Calculate
+    
+fim:
+End Sub
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,284 @@
+Attribute VB_Name = "E_Variaveis"
+Global ºLooper As Integer
+Global ºABA As Integer
+'1 = OBRA
+'2 = TB_DURACAO_1 | 3 = TB_DURACAO_2 | 4 = TB_DURACAO_3 | 5 = TB_DURACAO_4  ------- velocidade de vendas
+Global ºSenha As String
+Global Liberar_Deletar As Boolean
+Global Eventos As Boolean
+Global ºEdição(3) As Variant
+
+'LOCAL DO BANCO DE DADOS
+Function ºDIRETORIO() As String
+    ºDIRETORIO = ThisWorkbook.Sheets("BD_APOIO").Range("K8").Value
+End Function
+'LOCAL DO Arquivo
+Function LOC_BASE() As String
+    LOC_BASE = ThisWorkbook.Sheets("BD_APOIO").Range("K14").Value
+End Function
+
+'PASTA DA AREA
+Function ºPASTA() As String
+    ºPASTA = ThisWorkbook.Sheets("BD_APOIO").Range("K9").Value
+End Function
+
+'CODIGO EMPREENDIMENTO
+Function ºCODIGO_EMP(VALOR) As String
+    If VALOR = "" Then
+        ºCODIGO_EMP = Format(ThisWorkbook.Sheets("BD_APOIO").Range("K2").Value, "000000")
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K2").Value = VALOR
+    End If
+End Function
+
+'NOME EMPREENDIMENTO
+Function ºNOME_EMP(VALOR) As String
+    If VALOR = "" Then
+        ºNOME_EMP = ThisWorkbook.Sheets("BD_APOIO").Range("K3").Value
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K3").Value = VALOR
+    End If
+End Function
+
+'CODIGO DA VERSÃO
+Function ºCOD_VERSÃO(VALOR) As String
+    If VALOR = "" Then
+        ºCOD_VERSÃO = Format(ThisWorkbook.Sheets("BD_APOIO").Range("K4").Value, "000000")
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K4").Value = VALOR
+    End If
+End Function
+
+'NOME DA VERSÃO
+Function ºNOME_VERSÃO(VALOR) As String
+    Dim ºWB As Object
+    If VALOR = "" Then
+        ºNOME_VERSÃO = ThisWorkbook.Sheets("BD_APOIO").Range("K5").Value
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K5").Value = VALOR
+        Set ºWB = GetObject(LOC_BASE)
+        ºWB.Parent.Run "'" & ºWB.Name & "'!ºNOME_VERSÃO", VALOR
+    End If
+End Function
+
+'VARIAÇÃO VARIAVEL 1 (PREÇO M²)
+Function ºVAR_1(VALOR) As String
+    Dim ºWB As Object
+    If VALOR = "" Then
+        ºVAR_1 = ThisWorkbook.Sheets("BD_APOIO").Range("K12").Value
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K12").Value = VALOR
+        Set ºWB = GetObject(LOC_BASE)
+        ºWB.Sheets("Capa").Range("I11").Value = VALOR
+    End If
+End Function
+
+'VARIAÇÃO VARIAVEL 2 (CUSTO M²)
+Function ºVAR_2(VALOR) As String
+    Dim ºWB As Object
+    If VALOR = "" Then
+        ºVAR_2 = ThisWorkbook.Sheets("BD_APOIO").Range("K13").Value
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K13").Value = VALOR
+        Set ºWB = GetObject(LOC_BASE)
+        ºWB.Sheets("Capa").Range("O11").Value = VALOR
+    End If
+End Function
+
+'FATOR VARIAVEL 1 (PREÇO M²)
+Function ºFTR_1(VALOR) As String
+    Dim ºWB As Object
+    If VALOR = "" Then
+        ºFTR_1 = ThisWorkbook.Sheets("BD_APOIO").Range("L12").Value
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("L12").Value = VALOR
+        Set ºWB = GetObject(LOC_BASE)
+        ºWB.Sheets("Capa").Range("J11").Value = VALOR
+    End If
+End Function
+
+'FATOR VARIAVEL 2 (CUSTO M²)
+Function ºFTR_2(VALOR) As String
+    Dim ºWB As Object
+    If VALOR = "" Then
+        ºFTR_2 = ThisWorkbook.Sheets("BD_APOIO").Range("L13").Value
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("L13").Value = VALOR
+        Set ºWB = GetObject(LOC_BASE)
+        ºWB.Sheets("Capa").Range("P11").Value = VALOR
+    End If
+End Function
+
+'DATA BASE
+Function ºDATA_BASE(VALOR) As String
+    If VALOR = "" Then
+        ºDATA_BASE = Format(Replace(ThisWorkbook.Sheets("BD_APOIO").Range("K6").Value, "'", ""), "MM/YYYY")
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K6").Value = "'" & VALOR
+    End If
+End Function
+'DATA BASE FLUXO
+Function ºDATA_BASE_FLX() As String
+    If VALOR = "" Then
+        ºDATA_BASE_FLX = Format(Application.EDate(DateValue(Replace(ThisWorkbook.Sheets("BD_APOIO").Range("K6").Value, "'", "")), 1), "MM/YYYY")
+    End If
+End Function
+
+'DATA LANÇAMENTO FASE 1
+Function ºDATA_FASE_1(VALOR) As String
+    If VALOR = "" Then
+        ºDATA_FASE_1 = Format(Replace(ThisWorkbook.Sheets("BD_APOIO").Range("K7").Value, "'", ""), "MM/YYYY")
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K7").Value = "'" & VALOR
+    End If
+End Function
+
+'INDEXADO A
+Function ºINDEX(VALOR) As String
+    Dim ºWB As Object
+    If VALOR = "" Then
+        ºINDEX = ThisWorkbook.Sheets("BD_APOIO").Range("K11").Value
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K11").Value = VALOR
+        Set ºWB = GetObject(LOC_BASE)
+        ºWB.Sheets("CAPA").Range("S11").Value = VALOR
+    End If
+End Function
+
+'STATUS
+Function ºSTATUS_STUD(VALOR) As String
+    If VALOR = "" Then
+        ºSTATUS_STUD = Format(ThisWorkbook.Sheets("BD_APOIO").Range("K15").Value, "000000")
+    Else
+        ThisWorkbook.Sheets("BD_APOIO").Range("K15").Value = VALOR
+    End If
+End Function
+'E-Business
+Function TaxaEbusiness(ºPERF As Variant) As Double
+    ºC = Application.Match("E-Business", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(159, ºC).Text = "" Then
+        TaxaEbusiness = 0
+    Else
+        If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text), 0) <> 0 Then
+            TaxaEbusiness = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100
+        Else
+            If CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text) > 1 Then
+                TaxaEbusiness = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text) / 100
+            Else
+                TaxaEbusiness = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text)
+            End If
+        End If
+    End If
+End Function
+
+'Prêmio
+Function TaxaPremio(ºPERF As Variant) As Double
+    ºC = Application.Match("Prêmio", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(159, ºC).Text = "" Then
+        TaxaPremio = 0
+    Else
+        If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text), 0) <> 0 Then
+            TaxaPremio = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100
+        Else
+            If CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text) > 1 Then
+                TaxaPremio = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text) / 100
+            Else
+                TaxaPremio = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text)
+            End If
+        End If
+    End If
+End Function
+
+'Marketing
+Function TaxaMarketing(ºPERF As Variant) As Double
+    ºC = Application.Match("Marketing", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(159, ºC).Text = "" Then
+        TaxaMarketing = 0
+    Else
+        If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text), 0) <> 0 Then
+            TaxaMarketing = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100
+        Else
+            If CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text) > 1 Then
+                TaxaMarketing = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text) / 100
+            Else
+                TaxaMarketing = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text)
+            End If
+        End If
+    End If
+End Function
+
+'PDV
+Function TaxaPDV(ºPERF As Variant) As Double
+    ºC = Application.Match("PDV", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(159, ºC).Text = "" Then
+        TaxaPDV = 0
+    Else
+        If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text), 0) <> 0 Then
+            TaxaPDV = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100
+        Else
+            If CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text) > 1 Then
+                TaxaPDV = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text) / 100
+            Else
+                TaxaPDV = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text)
+            End If
+        End If
+    End If
+End Function
+'DTAS
+Function TaxaDTAS(ºFASE As Variant) As Double
+    ºC = Application.Match("taxa DTAS", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, 2).Text = "" Then
+        TaxaDTAS = 0
+    Else
+        If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Text), 0) <> 0 Then
+            TaxaDTAS = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Text, "%", "")) / 100
+        Else
+            If CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Text) > 1 Then
+                TaxaDTAS = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Text) / 100
+            Else
+                TaxaDTAS = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºFASE, ºC).Text)
+            End If
+        End If
+    End If
+End Function
+'% reembolsopermuta
+Function Reeb_Permt_fin() As Double
+    ºR = Application.Match("ºP_FINANC", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text = "" Then
+        Reeb_Permt_fin = 0
+    Else
+        If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text), 0) <> 0 Then
+            Reeb_Permt_fin = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text, "%", "")) / 100
+        Else
+            If CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text) > 1 Then
+                Reeb_Permt_fin = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text) / 100
+            Else
+                Reeb_Permt_fin = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text)
+            End If
+        End If
+    End If
+End Function
+
+'% reembolsopermuta
+Function Reeb_I_Permt_Fin() As Double
+
+    ºR = Application.Match("ºP_RET", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text = "" Then
+        Reeb_I_Permt_Fin = 0
+    Else
+        If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text), 0) <> 0 Then
+            Reeb_I_Permt_Fin = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text, "%", "")) / 100
+        Else
+            If CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text) > 1 Then
+                Reeb_I_Permt_Fin = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text) / 100
+            Else
+                Reeb_I_Permt_Fin = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text)
+            End If
+        End If
+    End If
+End Function
+
+
+
+
+

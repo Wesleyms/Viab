@@ -1,0 +1,66 @@
+Attribute VB_Name = "mExcelIcon"
+Option Explicit
+
+
+'Declaring the necessary API functions and constants.
+#If VBA7 And Win64 Then
+    
+    'For 64 bit Excel.
+    Private Declare PtrSafe Function ExtractIconA Lib "shell32.dll" _
+                                    (ByVal hInst As LongPtr, _
+                                    ByVal lpszExeFileName As String, _
+                                    ByVal nIconIndex As Long) As LongPtr
+                                    
+    Private Declare PtrSafe Function SendMessageA Lib "user32" _
+                                    (ByVal hwnd As LongPtr, _
+                                    ByVal wMsg As Long, _
+                                    ByVal wParam As LongPtr, _
+                                    ByVal lParam As LongPtr) As LongPtr
+
+    Private Const ICON_SMALL    As LongPtr = 0&
+    Private Const ICON_BIG      As LongPtr = 1&
+    Dim hwndIcon                As LongPtr
+
+#Else
+
+    'For 32 bit Excel.
+    Private Declare Function ExtractIconA Lib "shell32.dll" _
+                            (ByVal hInst As Long, _
+                            ByVal lpszExeFileName As String, _
+                            ByVal nIconIndex As Long) As Long
+                            
+    Private Declare Function SendMessageA Lib "user32" _
+                            (ByVal hwnd As Long, _
+                            ByVal wMsg As Long, _
+                            ByVal wParam As Long, _
+                            ByVal lParam As Long) As Long
+                            
+    Private Const ICON_SMALL    As Long = 0&
+    Private Const ICON_BIG      As Long = 1&
+    Dim hwndIcon                As Long
+
+#End If
+
+Private Const WM_SETICON    As Long = &H80
+    
+Sub ChangeExelIcon(hwndIcon)
+ 
+    If hwndIcon <> 0 Then
+        'Change the icon.
+        'For a big icon (32 x 32 pixels), use this line:
+        'SendMessageA Application.HWnd, WM_SETICON, ICON_BIG, hwndIcon
+        'For a small one (16 x 16 pixels), use the next line (typical case):
+        SendMessageA Application.hwnd, WM_SETICON, ICON_SMALL, hwndIcon
+    End If
+    
+End Sub
+ 
+Sub RestoreExcelIcon()
+    'Get the icon handle of Excel application.
+    hwndIcon = ExtractIconA(0, Application.Path & "\Excel.exe", 0)
+    'Check if the icon handle is valid.
+    If hwndIcon <> 0 Then
+        'Restore the original Excel icon.
+        SendMessageA Application.hwnd, WM_SETICON, ICON_SMALL, hwndIcon
+    End If
+End Sub

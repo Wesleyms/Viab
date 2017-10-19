@@ -1,0 +1,276 @@
+Attribute VB_Name = "H_OUTRAS_FUNCOES"
+'Option Explicit
+ 
+Private Type FILETIME
+    dwLowDateTime As Long
+    dwHighDateTime As Long
+End Type
+ 
+Private Type SYSTEMTIME
+    wYear As Integer
+    wMonth As Integer
+    wDayOfWeek As Integer
+    wDay As Integer
+    wHour As Integer
+    wMinute As Integer
+    wSecond As Integer
+    wMilliseconds As Integer
+End Type
+ 
+Private Const GENERIC_WRITE = &H40000000
+Private Const OPEN_EXISTING = 3
+Private Const FILE_SHARE_READ = &H1
+Private Const FILE_SHARE_WRITE = &H2
+ 
+
+#If VBA7 Then
+    'For 64 Bit Systems
+    Private Declare PtrSafe Function CreateFile Lib "kernel32" Alias "CreateFileA" (ByVal lpFileName As String, ByVal dwDesiredAccess As Long, ByVal dwShareMode As Long, ByVal lpSecurityAttributes As Long, ByVal dwCreationDisposition As Long, ByVal dwFlagsAndAttributes As Long, ByVal hTemplateFile As Long) As LongPtr
+    Private Declare PtrSafe Function SetFileTime Lib "kernel32" (ByVal hFile As Long, lpCreationTime As FILETIME, lpLastAccessTime As FILETIME, lpLastWriteTime As FILETIME) As LongPtr
+    Private Declare PtrSafe Function SystemTimeToFileTime Lib "kernel32" (lpSystemTime As SYSTEMTIME, lpFileTime As FILETIME) As LongPtr
+    Private Declare PtrSafe Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As LongPtr
+    Private Declare PtrSafe Function LocalFileTimeToFileTime Lib "kernel32" (lpLocalFileTime As FILETIME, lpFileTime As FILETIME) As LongPtr
+#Else
+    'For 32 Bit Systems
+    Private Declare Function CreateFile Lib "kernel32" Alias "CreateFileA" (ByVal lpFileName As String, ByVal dwDesiredAccess As Long, ByVal dwShareMode As Long, ByVal lpSecurityAttributes As Long, ByVal dwCreationDisposition As Long, ByVal dwFlagsAndAttributes As Long, ByVal hTemplateFile As Long) As Long
+    Private Declare Function SetFileTime Lib "kernel32" (ByVal hFile As Long, lpCreationTime As FILETIME, lpLastAccessTime As FILETIME, lpLastWriteTime As FILETIME) As Long
+    Private Declare Function SystemTimeToFileTime Lib "kernel32" (lpSystemTime As SYSTEMTIME, lpFileTime As FILETIME) As Long
+    Private Declare Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As Long
+    Private Declare Function LocalFileTimeToFileTime Lib "kernel32" (lpLocalFileTime As FILETIME, lpFileTime As FILETIME) As Long
+#End If
+ 
+Sub SetFileDate(ByVal sFileName As String, ByVal sDate As String, Optional sTime As String = "00:00:00")
+    
+    Dim dDate As Date
+    
+    Dim udtFileTime As FILETIME
+    Dim udtLocalTime As FILETIME
+    Dim udtSystemTime As SYSTEMTIME
+    Dim lFileHandle As Long
+    
+    dDate = Format(sDate, "DD-MM-YYYY HH:MM:SS")
+    udtSystemTime.wYear = Year(dDate)
+    udtSystemTime.wMonth = Month(dDate)
+    udtSystemTime.wDay = Day(dDate)
+    udtSystemTime.wDayOfWeek = Weekday(dDate) - 1
+    udtSystemTime.wHour = Hour(dDate)
+    udtSystemTime.wMinute = Minute(dDate)
+    udtSystemTime.wSecond = Second(dDate)
+    udtSystemTime.wMilliseconds = 0
+    ' Convert system time to local time
+    SystemTimeToFileTime udtSystemTime, udtLocalTime
+    ' Convert local time to GMT
+    LocalFileTimeToFileTime udtLocalTime, udtFileTime
+    ' Open the file for writing to get the f
+    '     ilehandle
+    lFileHandle = CreateFile(sFileName, GENERIC_WRITE, FILE_SHARE_READ Or FILE_SHARE_WRITE, ByVal 0&, OPEN_EXISTING, 0, 0)
+    ' If the file doesn't exist then tell the user
+    If lFileHandle >= 0 Then
+        ' Change date/time property of the file
+        SetFileTime lFileHandle, udtFileTime, udtFileTime, udtFileTime
+    Else
+        MsgBox sFileName & " doesn't exist!", vbCritical, "Error"
+    End If
+    ' Close the file handle
+    CloseHandle lFileHandle
+End Sub
+
+
+
+Sub PermutaEquivalente()
+    ºMARGEM = ThisWorkbook.Sheets("capa viabilidade").Range("AG36").Value
+    ºPfin = ThisWorkbook.Sheets("BD_CAD_VND").Range("C464").Value
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C464").Value = 0
+    ºCApoio = 19
+    For ºC = 5 To ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column
+        If Application.IfError(Application.Search("PAGAMENTO DE TERRENO", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value), 0) > 0 _
+            Or Application.IfError(Application.Search("OUTORGA ONEROSA", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value), 0) > 0 Then
+            ºL = ThisWorkbook.Sheets("Fluxo Operacional").Cells(Rows.Count, ºC).End(xlUp).Row
+            ThisWorkbook.Sheets("BD_APOIO").Range(Cells(6, ºCApoio).Address & ":" & Cells(ºL, ºCApoio).Address).Value = ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC).Address & ":" & Cells(ºL, ºC).Address).Value
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC).Address & ":" & Cells(ºL, ºC).Address).Value = 0
+            ºCApoio = ºCApoio + 1
+        End If
+    Next
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("R1").Value = 0
+    For ºL = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Range("C34").End(xlUp).Row
+        ThisWorkbook.Sheets("BD_CAD_VND").Range("U" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("F" & ºL).Value
+        ThisWorkbook.Sheets("BD_CAD_VND").Range("F" & ºL).FormulaR1C1 = "=R1C18*RC[-1]"
+    Next
+    ºR = Application.Match("ºT_Valor da Permuta Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    ºPermutaFiscal = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value
+    If ThisWorkbook.Sheets("Capa Viabilidade").Range("F17").Value > 0 Then
+        ºFATOR = ºPermutaFiscal / ThisWorkbook.Sheets("Capa Viabilidade").Range("F17").Value
+    Else
+        ºFATOR = 0
+    End If
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).NumberFormat = "0"
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).FormulaR1C1 = "=" & Replace(ºFATOR, ",", ".") & "*'Capa Viabilidade'!R17C6"
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AG36").GoalSeek goal:=ºMARGEM, changingcell:=ThisWorkbook.Sheets("BD_CAD_VND").Range("R1")
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AD42").Value = "Física: " & Format(ThisWorkbook.Sheets("Capa Viabilidade").Range("F17").Value, "0.00%")
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AD43").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("AG35").Value
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AD44").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("X17").Value
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AD45").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("AB17").Value
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("R1").Value = 0
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AG36").GoalSeek goal:=ºMARGEM, changingcell:=ThisWorkbook.Sheets("BD_CAD_VND").Range("C464")
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("D464").Value = 2 Then
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AI42").Value = "Parceria/Fundo: " & Format(ThisWorkbook.Sheets("Capa Viabilidade").Range("B17").Value, "0.00%")
+    Else
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AI42").Value = "Financeira: " & Format(ThisWorkbook.Sheets("Capa Viabilidade").Range("B17").Value, "0.00%")
+    End If
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AI43").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("AG35").Value
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AI44").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("X17").Value
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AI45").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("AB17").Value
+    For ºL = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Range("C34").End(xlUp).Row
+        ThisWorkbook.Sheets("BD_CAD_VND").Range("F" & ºL).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("U" & ºL).Value
+        ThisWorkbook.Sheets("BD_CAD_VND").Range("U" & ºL).Value = ""
+    Next
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C464").Value = ºPfin
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).NumberFormat = "@"
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value = ºPermutaFiscal
+    ºCApoio = 19
+    For ºC = 5 To ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column
+        If Application.IfError(Application.Search("PAGAMENTO DE TERRENO", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value), 0) > 0 _
+            Or Application.IfError(Application.Search("OUTORGA ONEROSA", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value), 0) > 0 Then
+            ºL = ThisWorkbook.Sheets("Fluxo Operacional").Cells(Rows.Count, ºC).End(xlUp).Row
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC).Address & ":" & Cells(ºL, ºC).Address).Value = ThisWorkbook.Sheets("BD_APOIO").Range(Cells(6, ºCApoio).Address & ":" & Cells(ºL, ºCApoio).Address).Value
+            ThisWorkbook.Sheets("BD_APOIO").Range(Cells(6, ºCApoio).Address & ":" & Cells(ºL, ºCApoio).Address).ClearContents
+            ºCApoio = ºCApoio + 1
+        End If
+    Next
+    Calculate
+    DoEvents
+End Sub
+
+
+Function DeParaLcto(ºTP_LCTO, ºGRUPO As String, ºI, ºL As Double, ºSH_IMP As String)
+    Dim ºSH_BD As Worksheet
+    Set ºSH_BD = ThisWorkbook.Sheets("lançamentos")
+    Dim ºVALOR_LCTO_1, ºVALOR_LCTO_2 As Variant
+    Dim ºPERCENTUAL As Boolean
+    
+    ºVALOR_LCTO_1 = Replace(Replace(ThisWorkbook.Sheets(ºSH_IMP).Range("C" & ºL + 8), "&lt;valortot&gt;", ""), "&lt;/valortot&gt;", "")
+    ºVALOR_LCTO_2 = Replace(Replace(ThisWorkbook.Sheets(ºSH_IMP).Range("C" & ºL + 7), "&lt;valor&gt;", ""), "&lt;/valor&gt;", "")
+    If ºVALOR_LCTO_1 <> ºVALOR_LCTO_2 And Replace(ºVALOR_LCTO_2, ".", ",") / 100 < 1 Then ºPERCENTUAL = True
+    If ºTP_LCTO = "Desp. de Incorporação (R$)" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "DESP. DE INCORPORAÇÃO R$"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "3.4 INCORPORAÇÃO"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+    ElseIf ºTP_LCTO = "Propaganda (% Propaganda)" Or ºTP_LCTO = "Propaganda (%)" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "MARKETING %"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "2 PROPAGANDA"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "% Marketing"
+    ElseIf Application.IfError(Application.Search("Propaganda", ºTP_LCTO), 0) And Application.IfError(Application.Search("%", ºTP_LCTO), 0) Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE PROPAGANDA (%)"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "2 PROPAGANDA"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "% VGV"
+    ElseIf Application.IfError(Application.Search("Propaganda", ºTP_LCTO), 0) <> 0 Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE PROPAGANDA (R$)"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "2 PROPAGANDA"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+    ElseIf ºTP_LCTO = "Descolamento Despesa Comercial" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE PROPAGANDA (%)"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "2 PROPAGANDA"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "% VGV"
+    ElseIf Application.IfError(Application.Search("Relacionamento", ºTP_LCTO), 0) <> 0 Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "RELACIONAMENTO COM CLIENTE"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "4 RELACIONAMENTO"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "% VGV"
+    ElseIf (Application.IfError(Application.Search("Prêmio", ºTP_LCTO), 0) <> 0 Or Application.IfError(Application.Search("Premio", ºTP_LCTO), 0) <> 0) And Application.IfError(Application.Search("Comissão", ºTP_LCTO), 0) <> 0 Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "PRÊMIO"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "6 COMERCIAL"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "% Prêmio"
+    ElseIf (Application.IfError(Application.Search("Pagamento", ºTP_LCTO), 0) <> 0 And Application.IfError(Application.Search("Terreno", ºTP_LCTO), 0) <> 0) Or ºTP_LCTO = "Terreno (%)" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "PAGAMENTO DE TERRENO (R$)"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "1 TERRENO"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+    ElseIf Application.IfError(Application.Search("Permuta", ºTP_LCTO), 0) <> 0 Or Application.IfError(Application.Search("permfis", ºTP_LCTO), 0) <> 0 Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE TERRENO (R$)"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "1 TERRENO"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+    ElseIf (Application.IfError(Application.Search("Comissão", ºTP_LCTO), 0) <> 0 Or Application.IfError(Application.Search("Comissao", ºTP_LCTO), 0) <> 0) And Application.IfError(Application.Search("Terreno", ºTP_LCTO), 0) <> 0 Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("B" & 1 + ºI).Value = "COMISSÃO SOBRE TERRENO R$"
+        ºSH_BD.Range("C" & 1 + ºI).Value = "1 TERRENO"
+        ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+    ElseIf ºGRUPO = "obra" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("C" & 1 + ºI).Value = "3 OBRA"
+        If Application.IfError(Application.Search("% Raso", ºTP_LCTO), 0) <> 0 Then
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTROS CUSTOS DE OBRA (% Custo Raso)"
+            ºSH_BD.Range("D" & 1 + ºI).Value = "% Custo Raso Fase"
+        ElseIf Application.IfError(Application.Search("%", ºTP_LCTO), 0) <> 0 Then
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTROS CUSTOS DE OBRA (%)"
+            ºSH_BD.Range("D" & 1 + ºI).Value = "% VGV"
+        Else
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTROS CUSTOS DE OBRA (R$)"
+            ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+        End If
+    ElseIf ºGRUPO = "desp_inc" Or ºGRUPO = "out_desp" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("C" & 1 + ºI).Value = "3.4 INCORPORAÇÃO"
+        If Application.IfError(Application.Search("%", ºTP_LCTO), 0) <> 0 Or ºPERCENTUAL Then
+            ºSH_BD.Range("D" & 1 + ºI).Value = "% VGV"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE INCORPORAÇÃO (%)"
+        Else
+            ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE INCORPORAÇÃO (R$)"
+        End If
+    ElseIf ºGRUPO = "terreno" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("C" & 1 + ºI).Value = "1 TERRENO"
+        If Application.IfError(Application.Search("%", ºTP_LCTO), 0) <> 0 Or ºPERCENTUAL Then
+            ºSH_BD.Range("D" & 1 + ºI).Value = "% Terreno Fiscal"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE TERRENO (% Terr.)"
+        Else
+            ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESPESAS DE TERRENO (R$)"
+        End If
+    ElseIf ºGRUPO = "desp_venda" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("C" & 1 + ºI).Value = "6 COMERCIAL"
+        If Application.IfError(Application.Search("%", ºTP_LCTO), 0) <> 0 Or ºPERCENTUAL Then
+            ºSH_BD.Range("D" & 1 + ºI).Value = "% VGV"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "DESCOLAMENTO DESPESA COMERCIAL (%)"
+        Else
+            ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "DESCOLAMENTO DESPESA COMERCIAL (R$)"
+        End If
+    ElseIf ºGRUPO = "receita" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("C" & 1 + ºI).Value = "OUTRAS RECEITAS"
+        If Application.IfError(Application.Search("%", ºTP_LCTO), 0) <> 0 Or ºPERCENTUAL Then
+            ºSH_BD.Range("D" & 1 + ºI).Value = "% VGV"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS RECEITAS (%)"
+        Else
+            ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS RECEITAS (R$)"
+        End If
+    ElseIf ºGRUPO = "desp_fin" Then
+        ºSH_BD.Range("DH" & 1 + ºI).Value = UCase(ºTP_LCTO)
+        ºSH_BD.Range("C" & 1 + ºI).Value = "8.3 DESP. C/ FINANC. (CA)"
+        If Application.IfError(Application.Search("%", ºTP_LCTO), 0) <> 0 Or ºPERCENTUAL Then
+            ºSH_BD.Range("D" & 1 + ºI).Value = "% VGV"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESP. C/ FINANC (%)"
+        Else
+            ºSH_BD.Range("D" & 1 + ºI).Value = "R$"
+            ºSH_BD.Range("B" & 1 + ºI).Value = "OUTRAS DESP. C/ FINANC (R$)"
+        End If
+    End If
+End Function
+
+
+
+
+
+
+
+

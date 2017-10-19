@@ -1,0 +1,349 @@
+VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} VINCULO 
+   ClientHeight    =   4245
+   ClientLeft      =   45
+   ClientTop       =   375
+   ClientWidth     =   4845
+   OleObjectBlob   =   "VINCULO.frx":0000
+   StartUpPosition =   2  'CenterScreen
+End
+Attribute VB_Name = "VINCULO"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+
+Function ErroMsg2(N_Err As Variant) As Boolean
+    ErroMsg2 = False
+    If N_Err.Number <> 0 Then
+        Me.Hide
+        ErroMsg (N_Err)
+        ErroMsg2 = True
+    End If
+End Function
+
+Sub att_n_vinc()
+    Call FormatarNumCur(Me.Name, "M_N_VINC", 0)
+    If M_N_VINC.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        DT_N_VINC.Caption = Format(Application.EDate(ºData, M_N_VINC.Value), "mm/yyyy")
+    Else
+        DT_N_VINC.Caption = ""
+    End If
+End Sub
+
+Sub att_dt_evnt()
+    Call FormatarNumCur(Me.Name, "TB_Meses_Event", 0)
+    If TB_Meses_Event.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        If OptionButton2.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)
+        ElseIf OptionButton3.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)
+        ElseIf OptionButton4.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)
+        End If
+    Else
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+
+End Sub
+
+Private Sub CB_Perf_Tipologia_1_Change()
+      'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg2(Err) Then Exit Sub
+   
+    If CB_Perf_Tipologia_1.Value <> "" Then
+        'PERFIL
+        ºPerfilTP = Left(CB_Perf_Tipologia_1, Application.Search("|", CB_Perf_Tipologia_1) - 2)
+        'VELOCIDADE DE VENDAS
+        ºTblVel = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 3).Value
+        ºInicioVnd = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, 5).Value, 0)
+        For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column Step 3
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+                ºInicioVnd_2 = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0)
+                If ºInicioVnd > ºInicioVnd_2 Then
+                    ºInicioVnd = ºInicioVnd_2
+                End If
+            End If
+        Next
+        M_INI_VND.Caption = ºInicioVnd
+        ºData = DateValue(ºDATA_BASE_FLX)
+        DT_INI_VND.Caption = Format(Application.EDate(ºData, ºInicioVnd), "mm/yyyy")
+        TB_Meses_Event.Enabled = True
+        TB_Meses_Event.BackColor = &H80000005
+    Else
+        TB_Meses_Event.Enabled = False
+        TB_Meses_Event.BackColor = &H8000000F
+        TB_Meses_Event.Value = ""
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+End Sub
+
+Private Sub M_N_VINC_AFTERUPDATE()
+    att_n_vinc
+End Sub
+
+Private Sub OK_Click()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg2(Err) Then Exit Sub
+    
+    If OK.Caption = "LCTO" Then
+        CadastroUnidades.CB_EVENTO_TI.Clear
+        If OptionButton2.Value Then
+            If TB_Meses_Event = "" Then
+                TB_Meses_Event.Value = 0
+                Call TB_Meses_Event_AFTERUPDATE
+            End If
+            CadastroUnidades.CB_EVENTO_TI.AddItem "INIVND PRF" & Left(CB_Perf_Tipologia_1, Application.Search("|", CB_Perf_Tipologia_1) - 2) & " " & TB_Meses_Event & " MES(ES)"
+            CadastroUnidades.CB_EVENTO_TI.Value = "INIVND PRF" & Left(CB_Perf_Tipologia_1, Application.Search("|", CB_Perf_Tipologia_1) - 2) & " " & TB_Meses_Event & " MES(ES)"
+            CadastroUnidades.CB_MESES_TI.Value = LB_Mes.Caption
+            CadastroUnidades.CB_MESES_TI.Enabled = False
+        ElseIf OptionButton3.Value Then
+            If TB_Meses_Event = "" Then
+                TB_Meses_Event.Value = 0
+                Call TB_Meses_Event_AFTERUPDATE
+            End If
+            CadastroUnidades.CB_EVENTO_TI.AddItem "INIOBR FSE" & CInt(CadastroUnidades.CB_FASE_TI.Value) & " " & TB_Meses_Event & " MES(ES)"
+            CadastroUnidades.CB_EVENTO_TI.Value = "INIOBR FSE" & CInt(CadastroUnidades.CB_FASE_TI.Value) & " " & TB_Meses_Event & " MES(ES)"
+            CadastroUnidades.CB_MESES_TI.Value = LB_Mes.Caption
+            CadastroUnidades.CB_MESES_TI.Enabled = False
+        ElseIf OptionButton4.Value Then
+            If TB_Meses_Event = "" Then
+                TB_Meses_Event.Value = 0
+                Call TB_Meses_Event_AFTERUPDATE
+            End If
+            CadastroUnidades.CB_EVENTO_TI.AddItem "FIMOBR FSE" & CInt(CadastroUnidades.CB_FASE_TI.Value) & " " & TB_Meses_Event & " MES(ES)"
+            CadastroUnidades.CB_EVENTO_TI.Value = "FIMOBR FSE" & CInt(CadastroUnidades.CB_FASE_TI.Value) & " " & TB_Meses_Event & " MES(ES)"
+            CadastroUnidades.CB_MESES_TI.Value = LB_Mes.Caption
+            CadastroUnidades.CB_MESES_TI.Enabled = False
+        Else
+            CadastroUnidades.CB_MESES_TI.Value = M_N_VINC.Value
+            CadastroUnidades.CB_EVENTO_TI.Value = ""
+        End If
+    Else
+        If OptionButton3.Value Then
+            If TB_Meses_Event = "" Then
+                TB_Meses_Event.Value = 0
+                Call TB_Meses_Event_AFTERUPDATE
+            End If
+            CadastroUnidades.Controls(OK.Caption).Value = "INIOBR " & TB_Meses_Event & " MES(ES)"
+            CadastroUnidades.Controls(OK.Caption).Locked = True
+        ElseIf OptionButton4.Value Then
+            If TB_Meses_Event = "" Then
+                TB_Meses_Event.Value = 0
+                Call TB_Meses_Event_AFTERUPDATE
+            End If
+            CadastroUnidades.Controls(OK.Caption).Value = "FIMOBR " & TB_Meses_Event & " MES(ES)"
+            CadastroUnidades.Controls(OK.Caption).Locked = True
+        Else
+            CadastroUnidades.Controls(OK.Caption).Value = M_N_VINC.Value
+            CadastroUnidades.Controls(OK.Caption).Locked = False
+        End If
+    End If
+    OK.Caption = ""
+    Unload Me
+End Sub
+
+Private Sub OptionButton3_Click()
+    If TB_Meses_Event.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        If OptionButton2.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)
+        ElseIf OptionButton3.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)
+            TB_Meses_Event.Enabled = True
+            TB_Meses_Event.BackColor = &H80000005
+        ElseIf OptionButton4.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)
+            TB_Meses_Event.Enabled = True
+            TB_Meses_Event.BackColor = &H80000005
+        End If
+    Else
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+End Sub
+Private Sub OptionButton4_Click()
+    If TB_Meses_Event.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        If OptionButton2.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)
+        ElseIf OptionButton3.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)
+            TB_Meses_Event.Enabled = True
+            TB_Meses_Event.BackColor = &H80000005
+        ElseIf OptionButton4.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)
+            TB_Meses_Event.Enabled = True
+            TB_Meses_Event.BackColor = &H80000005
+        End If
+    Else
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+End Sub
+
+Private Sub TB_Meses_Event_AFTERUPDATE()
+    Call FormatarNumCur(Me.Name, "TB_Meses_Event", 0)
+    If TB_Meses_Event.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        If OptionButton2.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)
+        ElseIf OptionButton3.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)
+        ElseIf OptionButton4.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)
+        End If
+    Else
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+End Sub
+Private Sub OptionButton1_Change()
+    M_N_VINC.Enabled = OptionButton1.Value
+    If M_N_VINC.Enabled Then M_N_VINC.BackColor = &H80000005 Else M_N_VINC.BackColor = &H8000000F
+    If Not OptionButton1.Value Then
+        TB_Meses_Event.Enabled = True
+        TB_Meses_Event.BackColor = &H80000005
+    Else
+        TB_Meses_Event.Enabled = False
+        TB_Meses_Event.BackColor = &H8000000F
+        TB_Meses_Event.Value = ""
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+End Sub
+Private Sub OptionButton2_Change()
+    CB_Perf_Tipologia_1.Enabled = OptionButton2.Value
+    CB_Perf_Tipologia_1.Clear
+    For Each ºLi In CadastroUnidades.LIST_Perfil_Venda.ListItems
+       CB_Perf_Tipologia_1.AddItem ºLi & " | " & ºLi.SubItems(1)
+    Next
+    'CB_Perf_Tipologia_1.List = CadastroUnidades.CB_Perf_Tipologia_1.List
+    M_INI_VND.Caption = ""
+    DT_INI_VND.Caption = ""
+    If CB_Perf_Tipologia_1.ListCount > 0 Then
+    
+    If M_INI_VND.Caption <> "" Then
+        TB_Meses_Event.Enabled = True
+        TB_Meses_Event.BackColor = &H80000005
+    Else
+        TB_Meses_Event.Enabled = False
+        TB_Meses_Event.BackColor = &H8000000F
+        TB_Meses_Event.Value = ""
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+    
+    If TB_Meses_Event.Value <> "" Then
+        ºData = DateValue(ºDATA_BASE_FLX)
+        If OptionButton2.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_VND.Caption)
+        ElseIf OptionButton3.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_INI_OBRA.Caption)
+        ElseIf OptionButton4.Value Then
+            LB_Data.Caption = Format(Application.EDate(ºData, CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)), "mm/yyyy")
+            LB_Mes.Caption = CDbl(TB_Meses_Event.Value) + CDbl(M_FIM_OBRA.Caption)
+        End If
+    Else
+        LB_Mes.Caption = ""
+        LB_Data.Caption = ""
+    End If
+    Else
+        OptionButton1.Value = True
+    End If
+End Sub
+
+ Sub Abrir()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg2(Err) Then Exit Sub
+    
+    If Me.OK.Caption <> "" Then
+        If Me.OK.Caption = "LCTO" Then
+            ºCURVA = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + CadastroUnidades.CB_FASE_TI.Value, 3).Value)
+            ºData = DateValue(ºDATA_BASE_FLX)
+            M_INI_OBRA.Caption = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, 1 + ºCURVA).Value, 0)
+            If M_INI_OBRA.Caption = "" Then
+                M_INI_OBRA.Caption = 0
+                M_FIM_OBRA.Caption = 0
+            Else
+                M_FIM_OBRA.Caption = M_INI_OBRA + ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, 1 + ºCURVA).End(xlUp).Row - 262
+            End If
+            DT_INI_OBRA.Caption = Format(Application.EDate(ºData, M_INI_OBRA), "mm/yyyy")
+            DT_FIM_OBRA.Caption = Format(Application.EDate(ºData, M_FIM_OBRA), "mm/yyyy")
+            ºEVENTO_V = CadastroUnidades.CB_EVENTO_TI.Value
+            If Application.IfError(Application.Search("INIVND PRF", ºEVENTO_V), 0) <> 0 Then
+                OptionButton2.Value = True
+                ºPERFILV = CDbl(Left(Replace(ºEVENTO_V, "INIVND PRF", ""), Application.Search(" ", Replace(ºEVENTO_V, "INIVND PRF", "")) - 1))
+                ºMESES_D = CDbl(Replace(Right(Replace(ºEVENTO_V, "INIVND PRF", ""), Len(Replace(ºEVENTO_V, "INIVND PRF", "")) - Application.Search(" ", Replace(ºEVENTO_V, "INIVND PRF", ""))), " MES(ES)", ""))
+                ºTblVel = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERFILV + 900, 3).Value
+                ºInicioVnd = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, 5).Value, 0)
+                TB_Meses_Event.Value = ºMESES_D
+                CB_Perf_Tipologia_1.Value = CB_Perf_Tipologia_1.List(ºPERFILV - 1)
+                att_dt_evnt
+            ElseIf Application.IfError(Application.Search("INIOBR FSE", ºEVENTO_V), 0) <> 0 Then
+                OptionButton3.Value = True
+                ºFASEO = CDbl(Left(Replace(ºEVENTO_V, "INIOBR FSE", ""), Application.Search(" ", Replace(ºEVENTO_V, "INIOBR FSE", "")) - 1))
+                ºMESES_D = CDbl(Replace(Right(Replace(ºEVENTO_V, "INIOBR FSE", ""), Len(Replace(ºEVENTO_V, "INIOBR FSE", "")) - Application.Search(" ", Replace(ºEVENTO_V, "INIOBR FSE", ""))), " MES(ES)", ""))
+                TB_Meses_Event.Value = ºMESES_D
+                att_dt_evnt
+            ElseIf Application.IfError(Application.Search("FIMOBR FSE", ºEVENTO_V), 0) <> 0 Then
+                OptionButton4.Value = True
+                ºFASEO = CDbl(Left(Replace(ºEVENTO_V, "FIMOBR FSE", ""), Application.Search(" ", Replace(ºEVENTO_V, "FIMOBR FSE", "")) - 1))
+                ºMESES_D = CDbl(Replace(Right(Replace(ºEVENTO_V, "FIMOBR FSE", ""), Len(Replace(ºEVENTO_V, "FIMOBR FSE", "")) - Application.Search(" ", Replace(ºEVENTO_V, "FIMOBR FSE", ""))), " MES(ES)", ""))
+                TB_Meses_Event.Value = ºMESES_D
+                att_dt_evnt
+            Else
+                M_N_VINC.Value = CadastroUnidades.CB_MESES_TI.Value
+                att_n_vinc
+            End If
+        Else
+            ºData = DateValue(ºDATA_BASE_FLX)
+            M_INI_OBRA.Caption = 0
+            M_FIM_OBRA.Caption = 0
+            DT_INI_OBRA.Caption = Format(Application.EDate(ºData, M_INI_OBRA), "mm/yyyy")
+            DT_FIM_OBRA.Caption = Format(Application.EDate(ºData, M_FIM_OBRA), "mm/yyyy")
+            ºEVENTO_V = CadastroUnidades.Controls(OK.Caption).Value
+            If Application.IfError(Application.Search("INIOBR FSE", ºEVENTO_V), 0) <> 0 Then
+                OptionButton3.Value = True
+                ºFASEO = 0
+                ºMESES_D = CDbl(Replace(Replace(ºEVENTO_V, "INIOBR ", ""), " MES(ES)", ""))
+                TB_Meses_Event.Value = ºMESES_D
+                att_dt_evnt
+            ElseIf Application.IfError(Application.Search("FIMOBR ", ºEVENTO_V), 0) <> 0 Then
+                OptionButton4.Value = True
+                ºFASEO = 0
+                ºMESES_D = CDbl(Replace(Replace(ºEVENTO_V, "FIMOBR ", ""), " MES(ES)", ""))
+                TB_Meses_Event.Value = ºMESES_D
+                att_dt_evnt
+            Else
+                M_N_VINC.Value = CadastroUnidades.CB_MESES_TI.Value
+                att_n_vinc
+            End If
+        End If
+    End If
+End Sub
+

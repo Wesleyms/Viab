@@ -1,0 +1,229 @@
+VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} SelecionarTabela 
+   Caption         =   "Banco de tabelas"
+   ClientHeight    =   5655
+   ClientLeft      =   2040
+   ClientTop       =   375
+   ClientWidth     =   13215
+   OleObjectBlob   =   "SelecionarTabela.frx":0000
+   StartUpPosition =   2  'CenterScreen
+End
+Attribute VB_Name = "SelecionarTabela"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+
+
+
+
+Sub CARREGAR_TABELAS()
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    Base_Tabelas.ColumnHeaders.Clear
+    Base_Tabelas.ListItems.Clear
+    Base_Tabelas.ColumnHeaders.Add , , "NOME", 200
+    Base_Tabelas.ColumnHeaders.Add , , "COD", 0
+    Base_Tabelas.ColumnHeaders.Add , , "observação", 0
+    
+   ' ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz("bd_tabelas_de_venda", "id_tabela, descricao, id_tipo_parcela, quantidade, inicio, percentual, cobrar_juros," & _
+    "inicio_juros, fixar_ini, fixar_fim, mes_ultima, Observacao", "", "id_tabela ASC", 12)
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        ºC = 3
+        'ºCod = ºVALORES(0, 1)
+        For ºR = 0 To UBound(ºVALORES)
+            
+            If ºCod <> ºVALORES(ºR, 0) Then
+                ºCod = ºVALORES(ºR, 0)
+                Set ºLi = Base_Tabelas.ListItems.Add(, , ºVALORES(ºR, 1))
+                ºLi.SubItems(1) = ºVALORES(ºR, 0)
+                If ºVALORES(ºR, 11) <> vbNull Then
+                    ºLi.SubItems(2) = ºVALORES(ºR, 11)
+                End If
+            End If
+        
+        Next
+    End If
+    
+    Base_Tabelas.View = lvwReport
+    Base_Tabelas.LabelEdit = lvwManual
+    Base_Tabelas.Gridlines = True
+    Base_Tabelas.FullRowSelect = True
+    
+     
+    Application.DisplayAlerts = True
+
+End Sub
+
+Sub CARREGAR_TABELA_D()
+    Detalhes_Tabela.ListItems.Clear
+    ºVALORES = SelectMatriz("bd_tabelas_de_venda", "id_tabela, descricao, id_tipo_parcela, quantidade, inicio, percentual, cobrar_juros," & _
+    "inicio_juros, fixar_ini, fixar_fim, mes_ultima, Observacao", "id_tabela='" & Base_Tabelas.SelectedItem.SubItems(1) & "'", "inicio ASC", 12)
+    If ºVALORES(0, 0) <> "VAZIO" Then
+       For ºR = 0 To UBound(ºVALORES)
+            '---------------------------------------------------------  TIPO  ---------------------------------------------------------------------------------------------------------------------------------
+            ºCTIPO = CDbl(ºVALORES(ºR, 2))
+            Set Li = Detalhes_Tabela.ListItems.Add(, , ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & Application.Match(ºCTIPO, ThisWorkbook.Sheets("BD_CAD_VND").Range("B523:B550")) + 522))
+            '---------------------------------------------------------  QUANTIDADE   -------------------------------------------------------------------------------------------------------------------
+            Li.SubItems(1) = ºVALORES(ºR, 3)
+            '---------------------------------------------------------  INICIO  -------------------------------------------------------------------------------------------------------------------------------
+            Li.SubItems(2) = ºVALORES(ºR, 4)
+            '---------------------------------------------------------  % DO VGV  --------------------------------------------------------------------------------------------------------------------------
+            Li.SubItems(3) = Format(ºVALORES(ºR, 5), "0.00%")
+            '---------------------------------------------------------  JUROS  -------------------------------------------------------------------------------------------------------------------------------
+            If ºVALORES(ºR, 6) = 1 Then Bol = "Sim" Else Bol = "Não"
+            Li.SubItems(4) = Bol
+            '---------------------------------------------------------  INICIO JUROS  ----------------------------------------------------------------------------------------------------------------------
+            Li.SubItems(5) = ºVALORES(ºR, 7)
+            '---------------------------------------------------------  FIXAR INICIO  ----------------------------------------------------------------------------------------------------------------------
+            If ºVALORES(ºR, 8) = 1 Then Bol = "Sim" Else Bol = "Não"
+            Li.SubItems(6) = Bol
+            '---------------------------------------------------------  FIXAR FIM  --------------------------------------------------------------------------------------------------------------------------
+            If ºVALORES(ºR, 9) = 1 Then Bol = "Sim" Else Bol = "Não"
+            Li.SubItems(7) = Bol
+            '---------------------------------------------------------  MES FIM  ------------------------------------------------------------------------------------------------------------------------------
+            Li.SubItems(8) = ºVALORES(ºR, 10)
+       Next
+    End If
+End Sub
+Private Sub Base_Tabelas_Click()
+    If Base_Tabelas.ListItems.Count > 0 Then
+        For Each ºLi In Base_Tabelas.ListItems
+            ºLi.Bold = False
+        Next
+        Base_Tabelas.SelectedItem.Bold = True
+        CARREGAR_TABELA_D
+        OBSERVACAO.Value = Base_Tabelas.SelectedItem.SubItems(2)
+    End If
+End Sub
+
+Private Sub BT_ERASE_PRF_Click()
+    If MsgBox("Conforme a exclusão da tabela?", vbYesNo) = vbYes Then
+        If Base_Tabelas.SelectedItem <> "" Then
+            DeleteMatriz "bd_tabelas_de_venda", "*", "id_tabela='" & Base_Tabelas.SelectedItem.SubItems(1) & "'"
+            CARREGAR_TABELAS
+        End If
+    End If
+End Sub
+
+Private Sub BT_OK_Click()
+    
+    ºlIN = Base_Tabelas.SelectedItem.SubItems(1)
+    
+    '----------------------------------------------------------------------------------------
+    '                                   Tabela de Vendas
+    '----------------------------------------------------------------------------------------
+    ºVALORES = SelectMatriz("bd_tabelas_de_venda", "id_tabela, descricao, id_tipo_parcela, quantidade, inicio, percentual, cobrar_juros," & _
+    "inicio_juros, fixar_ini, fixar_fim, mes_ultima, Observacao", "id_tabela='" & Base_Tabelas.SelectedItem.SubItems(1) & "'", "inicio ASC", 12)
+    
+    ºLTBL = ThisWorkbook.Sheets("BD_CAD_VND").Cells(157, 2).End(xlUp).Row + 1
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        ºC = 3
+        ºCod = ºLTBL - 107
+        For ºR = 0 To UBound(ºVALORES)
+           
+            'DESCRIÇÃO
+            ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & 107 + ºCod).Value = ºVALORES(ºR, 1)
+            
+            'TIPO
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 2)
+            ºC = ºC + 1
+            
+            'QUANTIDADE
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 3)
+            ºC = ºC + 1
+            
+            'INICIO
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 4)
+            ºC = ºC + 1
+            
+            'PERCENTUAL
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 5)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).NumberFormat = "0.00%"
+            ºC = ºC + 1
+            
+            'JUROS
+            If CBool(ºVALORES(ºR, 6)) Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = 1 Else ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = 0
+            ºC = ºC + 1
+            
+            'INI JUR
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 7)
+            ºC = ºC + 1
+            
+            'FX INI
+            If CBool(ºVALORES(ºR, 8)) Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = 1 Else ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = 0
+            ºC = ºC + 1
+            
+            'FX FIM
+            If CBool(ºVALORES(ºR, 9)) Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = 1 Else ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = 0
+            ºC = ºC + 1
+            
+            'FIM
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 10)
+            ºC = ºC + 1
+        Next
+    End If
+    
+
+    CadastroUnidades.CB_Select_Tbl.Clear
+    CadastroUnidades.LB_ParcentualAtingido.Caption = ""
+    
+    For ºLTBL_2 = 108 To ºLTBL
+        ThisWorkbook.Sheets("BD_CAD_VND").Range("A" & ºLTBL_2) = 100
+    Next
+    For ºLTBL_2 = 108 To ºLTBL
+        CadastroUnidades.CB_Select_Tbl.AddItem ºLTBL_2 - 107 & " | " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLTBL_2, 2).Value
+    Next
+    
+    Call TravarCampos
+    Unload SelecionarTabela
+End Sub
+
+Private Sub Detalhes_Tabela_BeforeLabelEdit(Cancel As Integer)
+
+End Sub
+
+Private Sub NEW_PERF_VEND_Click()
+    ºLVel = ThisWorkbook.Sheets("BD_CAD_VND").Cells(157, 2).End(xlUp).Row
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("B" & ºLVel + 1).Value = "Nova Tabela"
+    Application.EnableEvents = False
+    CadastroUnidades.CB_Select_Tbl.Clear
+    ºLTBL = ThisWorkbook.Sheets("BD_CAD_VND").Cells(157, 2).End(xlUp).Row
+    For ºLTBL_2 = 108 To ºLTBL
+        CadastroUnidades.CB_Select_Tbl.AddItem ºLTBL_2 - 107 & " | " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºLTBL_2, 2).Value
+    Next
+    Application.EnableEvents = True
+    CadastroUnidades.CB_Select_Tbl.Value = ºLVel - 106 & " | Nova Tabela"
+    CadastroUnidades.TB_Tbl_Name.Value = "Nova Tabela"
+    Unload Me
+    Call LiberarCampos
+End Sub
+
+Private Sub OBSERVACAO_Afterupdate()
+    If OBSERVACAO.Value <> "" Then
+        UpdateMatriz "bd_tabelas_de_venda", "Observacao='" & OBSERVACAO.Value & "'", "id_tabela='" & Base_Tabelas.SelectedItem.SubItems(1) & "'"
+        CARREGAR_TABELAS
+    End If
+End Sub
+Private Sub UserForm_Initialize()
+    Call CARREGAR_TABELAS
+    With Detalhes_Tabela.ColumnHeaders
+        .Add , , "Tipo", 55
+        .Add , , "Quantidade.", 65, lvwColumnCenter
+        .Add , , "Inicio", 55, lvwColumnCenter
+        .Add , , "% do VGV", 55, lvwColumnCenter
+        .Add , , "Cobrar Juros?", 65, lvwColumnCenter
+        .Add , , "Inicio Juros", 60, lvwColumnCenter
+        .Add , , "Fixar Inicio", 60, lvwColumnCenter
+        .Add , , "Fixar Final", 60, lvwColumnCenter
+        .Add , , "Mês de Encerramento", 100, lvwColumnCenter
+    End With
+    Detalhes_Tabela.View = lvwReport
+    Detalhes_Tabela.LabelEdit = lvwManual
+    Detalhes_Tabela.Gridlines = True
+    Detalhes_Tabela.FullRowSelect = True
+End Sub

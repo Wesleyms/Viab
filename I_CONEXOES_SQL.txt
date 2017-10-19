@@ -1,0 +1,1660 @@
+Attribute VB_Name = "I_CONEXOES_SQL"
+Public enderecoDB       As String
+Public sql              As String
+Public rs               As ADODB.Recordset
+Public mConn            As ADODB.Connection
+
+Public Const CAMPOS_TIPOLOGIAS As String = "id_chave_estudo, id_tipologia, fase_obra, descricao, unidades, permutas, area_pvt_cob, " _
+        & "area_pvt_descob, fator, preco_m_pvt_cob, vagas_vinculadas, perfil_venda"
+Public Const CAMPOS_VAGAS As String = "id_chave_estudo, id_vaga, fase_obra, unidades, area_pvt, preco_m, perfil_venda"
+Public Const CAMPOS_CURVAS_VND As String = "id_chave_estudo, id_curva, ordem, descricao, inicio, duracao, percentual"
+Public Const CAMPOS_TBL_VENDA As String = "id_chave_estudo, id_tabela, descricao, id_tipo_parcela, quantidade, inicio, percentual, " _
+        & "cobrar_juros, inicio_juros, fixar_ini, fixar_fim, mes_ultima"
+Public Const CAMPOS_PERFIL_VND As String = "id_chave_estudo, id_perfil, descricao, id_curva_vnd, id_tabela_1, id_tabela_2, tx_juros_tp, associativo, inicio_tabela_pos"
+Public Const CAMPOS_PERFIL_ESTD As String = "id_chave_estudo, descricao, regime, aliquota_ret, aliquota_ir_csll, aliquota_pis_cofins, " _
+        & "cms_indir, mj_cmss, cms_dir, marketing, mj_mkt, pdv, mj_pdv, e_business, mj_eb, premio, mj_premio, tx_vp, adm_carteira, mj_adm"
+Public Const CAMPOS_FASE_OBRA As String = "id_chave_estudo, id_fase, id_curva_ob, area_construida, area_pvt, custo_m2_const, custo_m2_pvt" _
+        & ", tx_adm_ger, tx_adm_ext, tx_dtas, inicio_ob, incorrido, valor_total"
+Public Const CAMPOS_CURVAS_OBRA As String = "id_chave_estudo, id_curva, descricao, percentuais"
+Public Const CAMPOS_TERRENO As String = "id_chave_estudo, area_terreno, percentual_permutado, permuta_fin, vlr_terreno_fiscal, " _
+        & "vlr_prmt_fisica_fiscal, tx_imposto_prmt_fis, mês_pagamento_imposto, tx_itbi, mês_pagamento_itbi, participacao_prmt_fis" _
+        & ", participacao_prmt_fin, participacao_fin_ret, participacao_fin_ircsll, participacao_fin_piscofins, modelo_parceria"
+Public Const CAMPOS_ASSOCIATIVO As String = "id_chave_estudo, ativar_assossociativo, tx_med_obra, percentual_deflacao, percentual_seguro, " _
+        & "tx_adm_p_und, tx_emss_contrato, prazo_liberacao, prazo_ultima, prazo_documentacao, valor_avaliacao_terreno, deflacionar_da_venda"
+Public Const CAMPOS_INDICADORES_CAPA As String = "id_chave_estudo, campo, receitas, impostos, pagamento_terreno, outros_custos_terreno, tt_propaganda, " _
+        & "tt_obra, tt_incorporacao, tt_comercial, despesas_e_custos, mes_exp_max, valor_exp_max, custo_efet_terreno_obra, custo_efet_terreno_vnd, vpl, " _
+        & "margem_bruta, vpl_custo_terreno_obra, vpl_receita, tir, vlr_m2_min, vlr_m2_meta"
+Public Const CAMPOS_CAPA As String = "id_chave_estudo, campo, und_vnd, juros_tp, deflacao, impostos, pagamento_terreno, cepac_outorga, " _
+        & "outros_terreno, tt_propaganda, custo_raso_taxas, outros_obra, tt_incorporacao, tt_relacionamento, tt_dtas, comissao_premio, " _
+        & "outros_comercial, tt_adm_carteira, medicao_obra, emissao_de_contratos, outros_geral, resultado_liquido"
+Public Const CAMPOS_USUARIOS As String = "id_usuario, alias_rede, nome_usuario, id_area, admin"
+Public Const CAMPOS_AREAS As String = "id_area, regional, area"
+Public Const CAMPOS_LANCAMENTO As String = "id_chave_estudo, fase_obra, id_tipo_lcto, n_parcelas, id_tipo_parcela, inicio_desembolso, " _
+        & "valor_lcto, usar_curva, descricao, percentuais_curva, comentario"
+        
+Public Sub SU_Conectadb()
+    On Error GoTo Erro
+    enderecoDB = ºDIRETORIO & "\DATABASE.accdb"
+    Set mConn = New ADODB.Connection
+    mConn.ConnectionString = "Provider = Microsoft.ACE.OLEDB.12.0;Data Source=" & enderecoDB & ";Jet OLEDB:Database"
+    mConn.Open
+    Set rs = New ADODB.Recordset
+    Exit Sub
+Erro:
+    MsgBox "Erro! Não Foi Possível Conectar ao Banco De Dados" & vbNewLine & vbNewLine & Err.Number & Err.Description, vbCritical
+    Set mConn = Nothing
+    Exit Sub
+End Sub
+Function DeleteMatriz(Tabela As String, Campo As String, Criterios As String)
+    Dim sql As String
+    Dim cn  As ADODB.Connection
+    Dim rs  As ADODB.Recordset
+    Dim i As Double
+    enderecoDB = ºDIRETORIO & "\bd_viabilidade_cyrela.accdb"
+    Set cn = New ADODB.Connection
+    cn.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & enderecoDB & ";Jet OLEDB:Database"
+
+    cn.Open
+    Set rs = New ADODB.Recordset
+    If Criterios <> "" Then
+        sql = "DELETE " & Campo & " From " & Tabela & " where " & Criterios & ";"
+    Else
+        sql = "DELETE " & Campo & " From " & Tabela & ";"
+    End If
+    
+    rs.Open sql, cn
+
+    cn.Close
+End Function
+
+Function SelectNome(Tabela As String, Campo As String, Criterios As String) As Variant
+    Dim Resultado As Variant
+    Dim sql As String
+    Dim cn  As ADODB.Connection
+    Dim rs  As ADODB.Recordset
+    Dim i As Double
+
+    Set cn = New ADODB.Connection
+    
+    
+    enderecoDB = ºDIRETORIO & "\bd_viabilidade_cyrela.accdb"
+    'enderecoDB = "F:\VIABILIDADE CYRELA\BD\bd_viabilidade_cyrela.accdb"
+    cn.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & enderecoDB & ";Jet OLEDB:Database"
+
+    cn.Open
+    Set rs = New ADODB.Recordset
+    If Criterios <> "" Then
+        sql = "SELECT " & Tabela & "." & Campo & " From " & Tabela & " where " & Criterios & ";"
+    Else
+        sql = "SELECT " & Tabela & "." & Campo & " From " & Tabela & ";"
+    End If
+    rs.Open sql, cn
+    i = -1
+    If Not rs.EOF Then
+        Do While Not rs.EOF
+            i = i + 1
+            rs.MoveNext
+        Loop
+    End If
+    cn.Close
+    If i < 0 Then
+        ReDim Resultado(0)
+        Resultado(0) = "VAZIO"
+        SelectNome = Resultado
+        Exit Function
+    End If
+    ReDim Resultado(i)
+    
+    cn.Open
+    rs.Open sql, cn
+    
+    i = 0
+    If Not rs.EOF Then
+        Do While Not rs.EOF
+            Resultado(i) = rs(0)
+            i = i + 1
+            rs.MoveNext
+        Loop
+    End If
+    cn.Close
+    
+    SelectNome = Resultado
+End Function
+Function SelectMatriz(Tabela As String, Campo As String, Criterios As String, Ordem As String, NumeroCampos As Integer) As Variant
+    Dim Resultado As Variant
+    Dim sql As String
+    Dim cn  As ADODB.Connection
+    Dim rs  As ADODB.Recordset
+    Dim i As Double
+    enderecoDB = ºDIRETORIO & "\bd_viabilidade_cyrela.accdb"
+    Set cn = New ADODB.Connection
+    cn.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & enderecoDB & ";Jet OLEDB:Database"
+
+    cn.Open
+    Set rs = New ADODB.Recordset
+    If Ordem <> "" Then
+        If Criterios <> "" Then
+            sql = "SELECT " & Campo & " From " & Tabela & " where " & Criterios & "ORDER BY " & Ordem & ";"
+        Else
+            sql = "SELECT " & Campo & " From " & Tabela & " ORDER BY " & Ordem & ";"
+        End If
+    Else
+        If Criterios <> "" Then
+            sql = "SELECT " & Campo & " From " & Tabela & " where " & Criterios & ";"
+        Else
+            sql = "SELECT " & Campo & " From " & Tabela & ";"
+        End If
+    End If
+    
+    rs.Open sql, cn
+    i = -1
+    If Not rs.EOF Then
+        Do While Not rs.EOF
+            i = i + 1
+            rs.MoveNext
+        Loop
+    End If
+    
+    If i < 0 Then
+        ReDim Resultado(0, 0)
+        Resultado(0, 0) = "VAZIO"
+        SelectMatriz = Resultado
+        Exit Function
+    End If
+    ReDim Resultado(i, NumeroCampos - 1)
+    
+    rs.MoveFirst
+    
+    i = 0
+    If Not rs.EOF Then
+        Do While Not rs.EOF
+            Resultado(i, 0) = rs(0)
+            For ºC = 1 To NumeroCampos - 1
+                Resultado(i, ºC) = rs(ºC)
+            Next
+            i = i + 1
+            rs.MoveNext
+        Loop
+    End If
+    cn.Close
+    SelectMatriz = Resultado
+End Function
+Function UpdateMatriz(Tabela As String, Valores As String, Criterios As String)
+    Dim sql As String
+    Dim cmd As ADODB.Command
+    Set cmd = New ADODB.Command
+    Dim cn  As ADODB.Connection
+    Set cn = New ADODB.Connection
+    enderecoDB = ºDIRETORIO & "\bd_viabilidade_cyrela.accdb"
+    cn.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & enderecoDB & ";Jet OLEDB:Database"
+    cn.Open
+    sql = "UPDATE " & Tabela & " SET " & Valores & " WHERE " & Criterios & ";"
+    With cmd
+        .ActiveConnection = cn
+        .CommandType = adCmdText
+        .CommandText = sql
+        .Execute
+    End With
+    cn.Close
+End Function
+
+Function InsertMatriz(Tabela As String, Colunas As String, Valores As String) As Variant
+    Dim cn  As ADODB.Connection
+    Dim cmd As ADODB.Command
+    Set cmd = New ADODB.Command
+    Set cn = New ADODB.Connection
+    enderecoDB = ºDIRETORIO & "\bd_viabilidade_cyrela.accdb"
+    cn.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & enderecoDB & ";Jet OLEDB:Database"
+    cn.Open
+    With cmd
+        .ActiveConnection = cn
+        .CommandType = adCmdText
+        .CommandText = "INSERT INTO " & Tabela & "(" & Colunas & ") VALUES (" & Valores & " );"
+        .Execute
+    End With
+    cn.Close
+End Function
+
+Function SelectNometest(Tabela As String, Campo As String, Criterios As String) As Variant
+    Dim Resultado As Variant
+    Dim sql As String
+    Dim cn  As ADODB.Connection
+    Dim cmd As ADODB.Command
+    Set cmd = New ADODB.Command
+    Set cn = New ADODB.Connection
+    Dim rs  As ADODB.Recordset
+    Dim i As Double
+    
+    enderecoDB = ºDIRETORIO & "\bd_viabilidade_cyrela.accdb"
+    cn.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & enderecoDB & ";Jet OLEDB:Database"
+    If Criterios <> "" Then
+        sql = "SELECT " & Tabela & "." & Campo & " From " & Tabela & " where " & Criterios & ";"
+    Else
+        sql = "SELECT " & Tabela & "." & Campo & " From " & Tabela & ";"
+    End If
+    cn.Open
+    With cmd
+        .ActiveConnection = cn
+        .CommandType = adCmdText
+        .CommandText = sql
+        Set rs = .Execute
+    End With
+    SelectNometest = rs(0)
+End Function
+
+Sub TIPOLOGIAS_UPLOAD(ºIDChaveEstudo)
+    Dim ºvalor As String
+    For ºL = 3 To 32
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2) Then
+            'ID TIPOLOGIA
+            ºID_Tipologia = Format(ºL - 2, "00000")
+            'FASE DE OBRA
+            ºFaseObra = Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 3).Value, "00")
+            'DESCRIÇÃO
+            ºDESCRICAO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 4).Value
+            'UNIDADES
+            ºUNIDADES = Round(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 5).Value), 0)
+            'PERMUTAS
+            ºPERMUTAS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 6).Value), ",", ".")
+            'AREA PRIVATIVA COBERTA
+            ºareapvtcob = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 7).Value), ",", ".")
+            'AREA PRIVATIVA DESCOBERTA
+            ºAREA_PVT_DESCOB = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 8).Value), ",", ".")
+            'FATOR DE PROPORÇÃO AREA DESCOBERTA X COBERTA
+            ºFATOR = Replace(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 9).Value, "%", "")), ",", ".")
+            'PREÇO DO M² COBERTO
+            ºpreco_m_pvt_cob = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 10).Value), ",", ".")
+            'VAGAS VINCULADAS
+            ºvagas_vinculadas = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value <> "" Then ºvagas_vinculadas = Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value, ",", ".")
+            'ID PERFIL DE VENDA
+            ºperfil_venda = Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 14).Value, "0000")
+            
+            ºvalor = "'" & ºIDChaveEstudo & "', '" & ºID_Tipologia & "', '" & ºFaseObra & "', '" _
+                    & ºDESCRICAO & "', " & ºUNIDADES & ", " & ºPERMUTAS & ", " & ºareapvtcob & ", " & ºAREA_PVT_DESCOB _
+                    & ", " & ºFATOR & ", " & ºpreco_m_pvt_cob & ", " & ºvagas_vinculadas & ", '" & ºperfil_venda & "'"
+            
+            InsertMatriz "tipologias", CAMPOS_TIPOLOGIAS, ºvalor
+        End If
+    Next
+End Sub
+Sub TABELA_VENDA_UPLOAD(ºIDChaveEstudo)
+    Dim ºvalor As String
+    For ºL = 108 To 156
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value <> "" Then
+            'ID TABELA
+            id_tabela = Format(ºL - 107, "00000")
+            'DESCRIÇÃO
+            ºDESCRICAO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value
+            For ºC = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, Columns.Count).End(xlToLeft).Column - 8 Step 9
+                'TIPO
+                ºTipo = Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value, "00000")
+                'QUANTIDADE
+                ºQUANTIDADE = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 1).Value
+                'INICIO
+                ºINICIO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 2).Value
+                'PERCENTUAL
+                ºPERCENTUAL = Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 3).Value, ",", ".")
+                'JUROS
+                ºJuros = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 4).Value
+                'INICIO JUROS
+                ºINIJuros = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 5).Value
+                'FIXAR INICIO
+                ºFXini = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 6).Value
+                'FIXAR ULTIMA
+                ºFXFim = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 7).Value
+                'MES ULTIMA
+                ºULTIMA = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 8).Value
+                
+                ºvalor = "'" & ºIDChaveEstudo & "', '" & id_tabela & "', '" & ºDESCRICAO & "', '" & ºTipo & "', " & ºQUANTIDADE & ", '" & ºINICIO & "', " & ºPERCENTUAL _
+                        & ", " & ºJuros & ", '" & ºINIJuros & "', " & ºFXini & ", " & ºFXFim & ", '" & ºULTIMA & "'"
+                InsertMatriz "tabelas_de_venda", CAMPOS_TBL_VENDA, ºvalor
+            Next
+        End If
+    Next
+End Sub
+Sub VAGASEXTRAS_UPLOAD(ºIDChaveEstudo)
+    Dim ºvalor As String
+    For ºL = 35 To 54
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2) Then
+            'ID TIPOLOGIA
+            ºid_vaga = Format(ºL - 35, "00000")
+            'FASE DE OBRA
+            ºFaseObra = Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 3).Value, "00")
+            'UNIDADES
+            ºUNIDADES = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 4).Value
+            'AREA PRIVATIVA
+            ºAREAPVT = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 6).Value
+            'PREÇO DO M²
+            ºpreco_m = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 7).Value
+            'ID PERFIL DE VENDA
+            ºperfil_venda = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 8).Value
+            
+            ºvalor = "'" & ºIDChaveEstudo & "', '" & ºid_vaga & "', '" & ºFaseObra & "', '" & ºDESCRICAO & "', " & ºUNIDADES & ", " & ºAREAPVT _
+                    & ", " & ºpreco_m & ", '" & ºperfil_venda & "'"
+            
+            InsertMatriz "vagas_extras", CAMPOS_VAGAS, ºvalor
+        End If
+    Next
+End Sub
+Sub CURVAS_VENDA_UPLOAD(ºIDChaveEstudo)
+    Dim ºvalor As String
+    For ºL = 57 To 100
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value <> "" Then
+            'ID CURVA
+            id_curva = Format(ºL - 56, "00000")
+            'DESCRIÇÃO
+            ºDESCRICAO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value
+            For ºC = 3 To 14 Step 3
+                'ORDEM
+                Ordem = Format(ºC / 3, "00")
+                'INICIO
+                ºINICIO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 2).Value
+                'DURAÇÃO
+                ºduracao = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC + 1).Value
+                'PERCENTUAL
+                ºPERCENTUAL = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value
+                If ºPERCENTUAL <> "" And ºINICIO <> "" And ºduracao <> "" Then
+                    ºvalor = "'" & ºIDChaveEstudo & "', '" & id_curva & "', " & Ordem & ", '" & ºDESCRICAO & "', '" & ºINICIO & "', " & ºduracao _
+                            & ", " & Replace(ºPERCENTUAL, ",", ".")
+                    InsertMatriz "curvas_de_venda", CAMPOS_CURVAS_VND, ºvalor
+                End If
+            Next
+        End If
+    Next
+End Sub
+
+Sub PERFIL_ESTUDO_UPLOAD(ºIDChaveEstudo)
+    Dim ºvalor As String
+    For ºL = 159 To 205
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value Then
+            'DESCRIÇÃO
+            ºDESCRICAO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 3).Value
+            'REGIME
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 4).Value = "RET" Then ºREGIME = 1 Else ºREGIME = 2
+            If ºREGIME = 1 Then
+                ºaliquota_ret = 0
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 5).Value <> "" Then ºaliquota_ret = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 5).Value, "%", "") / 100, ",", ".")
+                ºaliquota_ir_csll = 0
+                ºaliquota_pis_cofins = 0
+            Else
+                ºaliquota_ret = 0
+                ºaliquota_ir_csll = 0
+                ºaliquota_pis_cofins = 0
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 6).Value <> "" Then ºaliquota_ir_csll = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 6).Value, "%", "") / 100, ",", ".")
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 7).Value <> "" Then ºaliquota_pis_cofins = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 7).Value, "%", "") / 100, ",", ".")
+            End If
+            'COMISSAO INDIRETA
+            ºcms_indir = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 8).Value <> "" Then ºcms_indir = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 8).Value, "%", "") / 100, ",", ".")
+            'MAJORAR COMISSÃO
+            ºMJCMMSS = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(891, 3).Value)
+            'COMISSAO DIRETA
+            ºcms_dir = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 9).Value <> "" Then ºcms_dir = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 9).Value, "%", "") / 100, ",", ".")
+            'MARKETING
+            ºMARKETING = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 10).Value <> "" Then ºMARKETING = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 10).Value, "%", "") / 100, ",", ".")
+            'MAJORAR MARKETING
+            ºMJMKTG = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(887, 3).Value)
+            'PDV
+            ºPDV = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value <> "" Then ºPDV = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value, "%", "") / 100, ",", ".")
+            'MAJORAR PDV
+            ºMJPDV = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(888, 3).Value)
+            'E BUSINESS
+            ºEBUSI = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 12).Value <> "" Then ºEBUSI = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 12).Value, "%", "") / 100, ",", ".")
+            'MAJORAR E BUSINESS
+            ºMJEBUSI = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(889, 3).Value)
+            'PREMIO
+            ºPREMIO = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 13).Value <> "" Then ºPREMIO = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 13).Value, "%", "") / 100, ",", ".")
+            'MAJORAR PREMO
+            ºMJPREMIO = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(892, 3).Value)
+            'TAXA VP
+            ºTXVP = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 18).Value <> "" Then ºTXVP = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 18).Value, "%", "") / 100, ",", ".")
+            'ADM CARTEIRA
+            ºADMC = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 19).Value <> "" Then ºADMC = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 19).Value, "%", "") / 100, ",", ".")
+            ºMJADM = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(890, 3).Value)
+            
+            ºvalor = "'" & ºIDChaveEstudo & "', '" & ºDESCRICAO & "', " & ºREGIME & ", " & ºaliquota_ret & ", " & ºaliquota_ir_csll & ", " & ºaliquota_pis_cofins & ", " & ºcms_indir _
+                    & ", " & ºMJCMMSS & ", " & ºcms_dir & ", " & ºMARKETING & ", " & ºMJMKTG & ", " & ºPDV & ", " & ºMJPDV & ", " & ºEBUSI & ", " & ºMJEBUSI & ", " & ºPREMIO & ", " & ºMJPREMIO _
+                    & ", " & ºTXVP & ", " & ºADMC & ", " & ºMJADM
+            InsertMatriz "perfil_do_projeto", CAMPOS_PERFIL_ESTD, ºvalor
+        End If
+    Next
+End Sub
+Sub CUSTO_OBRA_UPLOAD(ºIDChaveEstudo)
+    For ºL = 210 To 258
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value <> "" Then
+            'FASE DE OBRA
+            ºFaseObra = Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value, "0000")
+            'CURVA OBRA
+            ºCURVA_OBRA = Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 3).Value, "0000")
+            'AREA CONSTRUIDA
+            ºAREACONST = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 4).Value <> "" Then ºAREACONST = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 4).Value), ",", ".")
+            'AREA PRIVATIVA
+            ºAREAPVT = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 5).Value <> "" Then ºAREAPVT = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 5).Value), ",", ".")
+            'Custo Metro Construido
+            ºCUSTOMCONSTR = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 6).Value <> "" Then ºCUSTOMCONSTR = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 6).Value), ",", ".")
+            'Custo Metro Privativo
+            ºCUSTOMPVT = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 7).Value <> "" Then ºCUSTOMPVT = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 7).Value), ",", ".")
+            'TAXA ADM GERENCIAL
+            ºTXADMGER = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 8).Value <> "" Then ºTXADMGER = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 8).Value, "%", "") / 100, ",", ".")
+            'TAXA ADM EFETIVA
+            ºTXADMEFET = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 9).Value <> "" Then ºTXADMEFET = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 9).Value, "%", "") / 100, ",", ".")
+            'TAXA DTAS
+            ºTXDTAS = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 10).Value <> "" Then ºTXDTAS = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 10).Value, "%", "") / 100, ",", ".")
+            'INIOBRA
+            ºINI_OBRA = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value
+            'INCORRIDO
+            ºINCORRIDO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 19).Value
+            'VALOR TOTAL
+            ºVALOR_TOTAL = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 14).Value <> "" Then ºVALOR_TOTAL = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 14).Value), ",", ".")
+            
+            ºvalor = "'" & ºIDChaveEstudo & "', '" & ºFaseObra & "', '" & ºCURVA_OBRA & "', " _
+                    & ºAREACONST & ", " & ºAREAPVT & ", " & ºCUSTOMCONSTR & ", " & ºCUSTOMPVT & ", " & ºTXADMGER _
+                    & ", " & ºTXADMEFET & ", " & ºTXDTAS & ", '" & ºINI_OBRA & "', " & ºINCORRIDO & ", " & ºVALOR_TOTAL
+            
+            InsertMatriz "fases_de_obra", CAMPOS_FASE_OBRA, CStr(ºvalor)
+        End If
+    Next
+End Sub
+Sub CURVA_DE_OBRA_UPLOAD(ºIDChaveEstudo)
+    For ºC = 2 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value <> "" Then
+            'ID TABELA
+            id_curva = Format(ºC - 1, "00000")
+            'DESCRIÇÃO
+            ºDESCRICAO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value
+            'INICIO
+            'ºINICIO = ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, ºC).Value
+            ºPercentuais = 0
+            For ºL = 262 To 460
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value <> "" Then
+                    If ºPercentuais = 0 Then
+                        ºPercentuais = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value, "%", "") / 100, ",", ".")
+                    Else
+                        ºPercentuais = ºPercentuais & "/" & Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value, "%", "") / 100, ",", ".")
+                    End If
+                End If
+            Next
+            ºvalor = "'" & ºIDChaveEstudo & "', '" & id_curva & "', '" & ºDESCRICAO & "', '" & ºPercentuais & "'"
+            InsertMatriz "curvas_de_obra", CAMPOS_CURVAS_OBRA, CStr(ºvalor)
+        End If
+    Next
+End Sub
+Sub TERRENO_UPLOAD(ºIDChaveEstudo)
+    'AREA TERRENO
+    ºAREA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(462, 3).Value <> "" Then ºAREA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(462, 3).Value), ",", ".")
+    '% PERMUTADO
+    ºPRCTL_PERMUTADO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(463, 3).Value <> "" Then ºPRCTL_PERMUTADO = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(463, 3).Value, "%", "") / 100, ",", ".")
+    '% PERMUTADO FINANCEIRA
+    ºPRCTL_PERMT_FIN = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(464, 3).Value <> "" Then ºPRCTL_PERMT_FIN = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(464, 3).Value, "%", "") / 100, ",", ".")
+    'PARCERIA
+    ºPARCERIA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(464, 4).Value = 2 Then ºPARCERIA = 1
+    'VALOR DO TERRENO
+    ºVLR_TERRENO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(465, 3).Value <> "" Then ºVLR_TERRENO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(465, 3).Value), ",", ".")
+    'VALOR DA PERMUTA
+    ºVLR_PERMUTA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(466, 3).Value <> "" Then ºVLR_PERMUTA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(466, 3).Value), ",", ".")
+    '% IMPOSTOS SOBRE PERMUTA
+    ºPRCTL_IMPOSTOS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(467, 3).Value <> "" Then ºPRCTL_IMPOSTOS = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(467, 3).Value, "%", "") / 100, ",", ".")
+    'MES PAGAMENTO IMPOSTOS
+    ºMES_IMPOSTOS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(468, 3).Value <> "" Then ºMES_IMPOSTOS = ThisWorkbook.Sheets("BD_CAD_VND").Cells(468, 3).Value
+    '% ITBI
+    ºPRCTL_ITBI = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(469, 3).Value <> "" Then ºPRCTL_ITBI = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(469, 3).Value, "%", "") / 100, ",", ".")
+    'MES PAGAMENTO ITBI
+    ºMES_ITBI = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(470, 3).Value <> "" Then ºMES_ITBI = ThisWorkbook.Sheets("BD_CAD_VND").Cells(470, 3).Value
+    '% PARTICIPAÇÃO PERMUTA FISICA
+    ºP_PRMT_FIS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(882, 3).Value <> "" Then ºP_PRMT_FIS = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(882, 3).Value, "%", "") / 100, ",", ".")
+    '% PARTICIPAÇÃO PERMUTA FINANCEIRA
+    ºP_PRMT_FIN = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(883, 3).Value <> "" Then ºP_PRMT_FIN = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(883, 3).Value, "%", "") / 100, ",", ".")
+    '% PARTICIPAÇÃO RET
+    ºPRCTL_RET = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(884, 3).Value <> "" Then ºPRCTL_RET = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(884, 3).Value, "%", "") / 100, ",", ".")
+    '% PARTICIPAÇÃO IRCLSS
+    ºPRCTL_IRCLSS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(885, 3).Value <> "" Then ºPRCTL_IRCLSS = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(885, 3).Value, "%", "") / 100, ",", ".")
+    '% PARTICIPAÇÃO PISCOFINS
+    ºP_PISCOFINS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(886, 3).Value <> "" Then ºP_PISCOFINS = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(886, 3).Value, "%", "") / 100, ",", ".")
+    
+    ºvalor = "'" & ºIDChaveEstudo & "', " & ºAREA & ", " & ºPRCTL_PERMUTADO & ", " & ºPRCTL_PERMT_FIN & ", " & ºVLR_TERRENO & ", " & ºVLR_PERMUTA _
+            & ", " & ºPRCTL_IMPOSTOS & ", '" & ºMES_IMPOSTOS & "', " & ºPRCTL_ITBI & ", '" & ºMES_ITBI & "', " & ºP_PRMT_FIS & ", " & ºP_PRMT_FIN & ", " & ºPRCTL_RET _
+            & ", " & ºPRCTL_IRCLSS & ", " & ºP_PISCOFINS & ", " & ºPARCERIA
+    InsertMatriz "terreno", CAMPOS_TERRENO, CStr(ºvalor)
+End Sub
+
+Sub ASSOCIATIVO_UPLOAD(ºIDChaveEstudo)
+    'UTILIZA ASSOCIATIVO?
+    ºAssociativo = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(480, 3).Value Then ºAssociativo = 1
+    'TAXA DE MEDIÇÃO DE OBRA
+    ºMEDIÇÃO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(481, 3).Value <> "" Then ºMEDIÇÃO = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(481, 3).Value, "%", "") / 100, ",", ".")
+    '% DE DEFLAÇÃO
+    ºDEFLAÇAO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(482, 3).Value <> "" Then ºDEFLAÇAO = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(482, 3).Value, "%", "") / 100, ",", ".")
+    'SEGURO OBRA
+    ºSEGURO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(483, 4).Value = 2 Then ºSEGURO = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(483, 3).Value, "%", "") / 100, ",", ".")
+    'TX ADM P/ UNIDADE
+    ºTAXAADM = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(484, 3).Value <> "" Then ºTAXAADM = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(484, 3).Value), ",", ".")
+    'TX EMISSÃO DE CONTRATO
+    ºCONTRATO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(485, 3).Value <> "" Then ºCONTRATO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(485, 3).Value), ",", ".")
+    'PRAZO DE LIBERAÇÃO
+    ºPZ_LIBERAÇÃO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(486, 3).Value <> "" Then ºPZ_LIBERAÇÃO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(486, 3).Value), ",", ".")
+    'PRAZO ULTIMA
+    ºPZ_ULTIMA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(487, 3).Value <> "" Then ºPZ_ULTIMA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(487, 3).Value), ",", ".")
+    'PRAZO DOCUMENTAÇÃO
+    ºPZ_DOCS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(488, 3).Value <> "" Then ºPZ_DOCS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(488, 3).Value), ",", ".")
+    'VALOR DO TERRENO A VP
+    ºTerrenoVP = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(489, 3).Value <> "" Then ºTerrenoVP = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(489, 3).Value), ",", ".")
+    'MODO DE DEFALÇAO
+    ºMODO_DEFLA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(490, 3).Value = "Primeira Venda" Then
+        ºMODO_DEFLA = 1
+    ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Cells(490, 3).Value = "Venda da Unidade" Then
+        ºMODO_DEFLA = 2
+    Else
+        ºMODO_DEFLA = 3
+    End If
+    ºvalor = "'" & ºIDChaveEstudo & "', " & ºAssociativo & ", " & ºMEDIÇÃO & ", " & ºDEFLAÇAO & ", " & ºSEGURO & ", " & ºTAXAADM _
+            & ", " & ºCONTRATO & ", " & ºPZ_LIBERAÇÃO & ", " & ºPZ_ULTIMA & ", " & ºPZ_DOCS & ", " & ºTerrenoVP & ", " & ºMODO_DEFLA
+    InsertMatriz "financiamento_associativo", CAMPOS_ASSOCIATIVO, CStr(ºvalor)
+End Sub
+
+Sub iCAPA_UPLOAD(ºIDChaveEstudo)
+
+    '-----------------------------------------------------------------------------------------
+    '                               WACC
+    '-----------------------------------------------------------------------------------------
+    
+    'INDEXADO A
+    ºINDEXador = 1
+    'RECEITAS
+    ºRECEITAS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(556, 5).Value <> "" Then ºRECEITAS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(556, 5).Value), ",", ".")
+    'IMPOSTOS
+    ºIMPOSTOS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(557, 5).Value <> "" Then ºIMPOSTOS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(557, 5).Value), ",", ".")
+    'PAGAMENTO TERRENO
+    ºPAGAMENTO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(558, 5).Value <> "" Then ºPAGAMENTO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(558, 5).Value), ",", ".")
+    'OUTROS GASTOS TERRENO
+    ºOUTROS_TRRN = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(559, 5).Value <> "" Then ºOUTROS_TRRN = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(559, 5).Value), ",", ".")
+    'TOTAL PROPAGANDA
+    ºPROPAGANDA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(560, 5).Value <> "" Then ºPROPAGANDA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(560, 5).Value), ",", ".")
+    'CUSTO DE OBRA
+    ºCUSTOOBRA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(561, 5).Value <> "" Then ºCUSTOOBRA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(561, 5).Value), ",", ".")
+    'INCORPORAÇÃO
+    ºINCORPORAÇÃO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(562, 5).Value <> "" Then ºINCORPORAÇÃO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(562, 5).Value), ",", ".")
+    'COMERCIAL
+    ºCOMERCIAL = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(563, 5).Value <> "" Then ºCOMERCIAL = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(563, 5).Value), ",", ".")
+    'DESPESAS TOTAIS
+    ºDESPESASTOTAIS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(564, 5).Value <> "" Then ºDESPESASTOTAIS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(564, 5).Value), ",", ".")
+    'EXPOSIÇÃOMAXIMA
+    ºEXPOSIÇÃOMAXIMA = 0
+    If Application.IfError(ThisWorkbook.Sheets("BD_CAD_VND").Cells(565, 4).Value, 0) <> "" Then ºEXPOSIÇÃOMAXIMA = "'" & Application.IfError(ThisWorkbook.Sheets("BD_CAD_VND").Cells(565, 4).Value, 0) & "'"
+    'EXPOSIÇÃOMAXIMA VALOR
+    ºEXPOSIÇÃOMAXIMA_VALOR = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(565, 5).Value <> "" Then ºEXPOSIÇÃOMAXIMA_VALOR = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(565, 5).Value), ",", ".")
+    'CUSTO EFETIVO OBRA
+    ºCUSTOEFETIVOO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(566, 5).Value <> "" Then ºCUSTOEFETIVOO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(566, 5).Value), ",", ".")
+    'CUSTO EFETIVO VENDA
+    ºCUSTOEFETIVOV = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(567, 5).Value <> "" Then ºCUSTOEFETIVOV = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(567, 5).Value), ",", ".")
+    'VPL
+    ºVPL = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(568, 5).Value <> "" Then ºVPL = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(568, 5).Value), ",", ".")
+    'MARGEM BRUTA
+    ºMARGEM = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(569, 5).Value <> "" Then ºMARGEM = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(569, 5).Value, "%", "") / 100, ",", ".")
+    'VPL CUSTO OBRA
+    ºVPLOBRA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(570, 5).Value <> "" Then ºVPLOBRA = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(570, 5).Value, "%", "") / 100, ",", ".")
+    'VPL RECEITA
+    ºVPLRECEITA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(571, 5).Value <> "" Then ºVPLRECEITA = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(571, 5).Value, "%", "") / 100, ",", ".")
+    'TIR
+    ºTIR = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(572, 5).Value <> "" Then ºTIR = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(572, 5).Value, "%", "") / 100, ",", ".")
+    'VALOR DO M2 MININO
+    ºVLRMIN = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(573, 5).Value < 100000000 Then
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(573, 5).Value <> "" Then ºVLRMIN = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(573, 5).Value), ",", ".")
+    End If
+    'VALOR DO M2 META
+    ºVLRMETA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(574, 5).Value > 100000000 Then
+        ºVLRMETA = 0
+    Else
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(574, 5).Value <> "" Then ºVLRMETA = Replace(Round(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(574, 5).Value, "E+", "")), 6), ",", ".")
+    End If
+    ºvalor = "'" & ºIDChaveEstudo & "', " & ºINDEXador & ", " & ºRECEITAS & ", " & ºIMPOSTOS & ", " & ºPAGAMENTO & ", " & ºOUTROS_TRRN _
+            & ", " & ºPROPAGANDA & ", " & ºCUSTOOBRA & ", " & ºINCORPORAÇÃO & ", " & ºCOMERCIAL & ", " & ºDESPESASTOTAIS & ", " & ºEXPOSIÇÃOMAXIMA _
+            & ", " & ºEXPOSIÇÃOMAXIMA_VALOR & ", " & ºCUSTOEFETIVOO & ", " & ºCUSTOEFETIVOV & ", " & ºVPL & ", " & ºMARGEM & ", " & ºVPLOBRA _
+            & ", " & ºVPLRECEITA & ", " & ºTIR & ", " & ºVLRMIN & ", " & ºVLRMETA
+    InsertMatriz "indicadores_capa", CAMPOS_INDICADORES_CAPA, CStr(ºvalor)
+End Sub
+
+Sub TOTAIS_CAPA_UPLOAD(ºIDChaveEstudo)
+
+    '-----------------------------------------------------------------------------------------
+    '                               REALIZADO
+    '-----------------------------------------------------------------------------------------
+    
+    'CAMPO REALIZADO OU A REALIZAR
+    ºCAMPO = 1
+    'RECEITAS
+    ºV_UNIDADES = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(556, 2).Value <> "" Then ºV_UNIDADES = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(556, 2).Value), ",", ".")
+    'RECEITA FINANCEIRA
+    ºFINANCEIRA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(557, 2).Value <> "" Then ºFINANCEIRA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(557, 2).Value), ",", ".")
+    'DEFLAÇÃO
+    ºDEFLAÇÃO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(558, 2).Value <> "" Then ºDEFLAÇÃO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(558, 2).Value), ",", ".")
+    'IMPOSTOS
+    ºIMPOSTOS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(559, 2).Value <> "" Then ºIMPOSTOS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(559, 2).Value), ",", ".")
+    'PAGAMENTO TERRENO
+    ºPGTO_TERRENO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(560, 2).Value <> "" Then ºPGTO_TERRENO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(560, 2).Value), ",", ".")
+    'CEPAC OUTORGA
+    ºCEPAC_OUTORGA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(561, 2).Value <> "" Then ºCEPAC_OUTORGA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(561, 2).Value), ",", ".")
+    'OUTROS TERRENO
+    ºOUTROS_TERRENO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(562, 2).Value <> "" Then ºOUTROS_TERRENO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(562, 2).Value), ",", ".")
+    'TOTAL PROPAGANDA
+    ºPROPAGANDA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(563, 2).Value <> "" Then ºPROPAGANDA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(563, 2).Value), ",", ".")
+    'CUSTORASO+TAXAS
+    ºRASO_TAXAS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(564, 2).Value <> "" Then ºRASO_TAXAS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(564, 2).Value), ",", ".")
+    'OUTROS CUSTOS DE OBRA
+    ºOUTROS_OBRA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(565, 2).Value <> "" Then ºOUTROS_OBRA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(565, 2).Value), ",", ".")
+    'TOTAL INCORPORAÇÃO
+    ºTOTAL_INCOP = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(566, 2).Value <> "" Then ºTOTAL_INCOP = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(566, 2).Value), ",", ".")
+    'TOTAL RELACIONAMENTO
+    ºTOTAL_RELACIONAMENTO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(567, 2).Value <> "" Then ºTOTAL_RELACIONAMENTO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(567, 2).Value), ",", ".")
+    'TOTAL DTAS
+    ºTOTAL_DTAS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(568, 2).Value <> "" Then ºTOTAL_DTAS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(568, 2).Value), ",", ".")
+    'COMISSÃO PREMIO
+    ºCOMISSAO_PREMIO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(569, 2).Value <> "" Then ºCOMISSAO_PREMIO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(569, 2).Value), ",", ".")
+    'OUTRAS DESPESAS COMERCIAL
+    ºOUTRAS_COMERCIAL = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(570, 2).Value <> "" Then ºOUTRAS_COMERCIAL = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(570, 2).Value), ",", ".")
+    'ADM CARTEIRA
+    ºADM_CARTEIRA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(571, 2).Value <> "" Then ºADM_CARTEIRA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(571, 2).Value), ",", ".")
+    'MEDIÇÃO
+    ºMEDIÇÃO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(572, 2).Value <> "" Then ºMEDIÇÃO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(572, 2).Value), ",", ".")
+    'EMISSÃO DE CONTRATOS
+    ºTXEMISSAO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(573, 2).Value <> "" Then ºTXEMISSAO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(573, 2).Value), ",", ".")
+    'OUTRAS DESPESAS
+    ºOUTRAS_D = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(574, 2).Value <> "" Then ºOUTRAS_D = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(574, 2).Value), ",", ".")
+    'RESULTADO LIQUIDO
+    ºRESULTADO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(575, 2).Value <> "" Then ºRESULTADO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(575, 2).Value), ",", ".")
+    
+    
+    ºvalor = "'" & ºIDChaveEstudo & "', " & ºCAMPO & ", " & ºV_UNIDADES & ", " & ºFINANCEIRA & ", " & ºDEFLAÇÃO & ", " & ºIMPOSTOS _
+            & ", " & ºPGTO_TERRENO & ", " & ºCEPAC_OUTORGA & ", " & ºOUTROS_TERRENO & ", " & ºPROPAGANDA & ", " & ºRASO_TAXAS & ", " & ºOUTROS_OBRA _
+            & ", " & ºTOTAL_INCOP & ", " & ºTOTAL_RELACIONAMENTO & ", " & ºTOTAL_DTAS & ", " & ºCOMISSAO_PREMIO & ", " & ºOUTRAS_COMERCIAL & ", " & ºADM_CARTEIRA _
+            & ", " & ºMEDIÇÃO & ", " & ºTXEMISSAO & ", " & ºOUTRAS_D & ", " & ºRESULTADO
+    InsertMatriz "valores_totais_capa", CAMPOS_CAPA, CStr(ºvalor)
+    '-----------------------------------------------------------------------------------------
+    '                               A REALIZAR
+    '-----------------------------------------------------------------------------------------
+    
+    'CAMPO REALIZADO OU A REALIZAR
+    ºCAMPO = 2
+    'RECEITAS
+    ºV_UNIDADES = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(556, 3).Value <> "" Then ºV_UNIDADES = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(556, 3).Value), ",", ".")
+    'RECEITA FINANCEIRA
+    ºFINANCEIRA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(557, 3).Value <> "" Then ºFINANCEIRA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(557, 3).Value), ",", ".")
+    'DEFLAÇÃO
+    ºDEFLAÇÃO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(558, 3).Value <> "" Then ºDEFLAÇÃO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(558, 3).Value), ",", ".")
+    'IMPOSTOS
+    ºIMPOSTOS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(559, 3).Value <> "" Then ºIMPOSTOS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(559, 3).Value), ",", ".")
+    'PAGAMENTO TERRENO
+    ºPGTO_TERRENO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(560, 3).Value <> "" Then ºPGTO_TERRENO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(560, 3).Value), ",", ".")
+    'CEPAC OUTORGA
+    ºCEPAC_OUTORGA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(561, 3).Value <> "" Then ºCEPAC_OUTORGA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(561, 3).Value), ",", ".")
+    'OUTROS TERRENO
+    ºOUTROS_TERRENO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(562, 3).Value <> "" Then ºOUTROS_TERRENO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(562, 3).Value), ",", ".")
+    'TOTAL PROPAGANDA
+    ºPROPAGANDA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(563, 3).Value <> "" Then ºPROPAGANDA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(563, 3).Value), ",", ".")
+    'CUSTORASO+TAXAS
+    ºRASO_TAXAS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(564, 3).Value <> "" Then ºRASO_TAXAS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(564, 3).Value), ",", ".")
+    'OUTROS CUSTOS DE OBRA
+    ºOUTROS_OBRA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(565, 3).Value <> "" Then ºOUTROS_OBRA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(565, 3).Value), ",", ".")
+    'TOTAL INCORPORAÇÃO
+    ºTOTAL_INCOP = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(566, 3).Value <> "" Then ºTOTAL_INCOP = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(566, 3).Value), ",", ".")
+    'TOTAL RELACIONAMENTO
+    ºTOTAL_RELACIONAMENTO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(567, 3).Value <> "" Then ºTOTAL_RELACIONAMENTO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(567, 3).Value), ",", ".")
+    'TOTAL DTAS
+    ºTOTAL_DTAS = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(568, 3).Value <> "" Then ºTOTAL_DTAS = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(568, 3).Value), ",", ".")
+    'COMISSÃO PREMIO
+    ºCOMISSAO_PREMIO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(569, 3).Value <> "" Then ºCOMISSAO_PREMIO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(569, 3).Value), ",", ".")
+    'OUTRAS DESPESAS COMERCIAL
+    ºOUTRAS_COMERCIAL = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(570, 3).Value <> "" Then ºOUTRAS_COMERCIAL = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(570, 3).Value), ",", ".")
+    'ADM CARTEIRA
+    ºADM_CARTEIRA = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(571, 3).Value <> "" Then ºADM_CARTEIRA = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(571, 3).Value), ",", ".")
+    'MEDIÇÃO
+    ºMEDIÇÃO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(572, 3).Value <> "" Then ºMEDIÇÃO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(572, 3).Value), ",", ".")
+    'EMISSÃO DE CONTRATOS
+    ºTXEMISSAO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(573, 3).Value <> "" Then ºTXEMISSAO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(573, 3).Value), ",", ".")
+    'OUTRAS DESPESAS
+    ºOUTRAS_D = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(574, 3).Value <> "" Then ºOUTRAS_D = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(574, 3).Value), ",", ".")
+    'RESULTADO LIQUIDO
+    ºRESULTADO = 0
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(575, 3).Value <> "" Then ºRESULTADO = Replace(CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(575, 3).Value), ",", ".")
+    ºvalor = "'" & ºIDChaveEstudo & "', " & ºCAMPO & ", " & ºV_UNIDADES & ", " & ºFINANCEIRA & ", " & ºDEFLAÇÃO & ", " & ºIMPOSTOS _
+            & ", " & ºPGTO_TERRENO & ", " & ºCEPAC_OUTORGA & ", " & ºOUTROS_TERRENO & ", " & ºPROPAGANDA & ", " & ºRASO_TAXAS & ", " & ºOUTROS_OBRA _
+            & ", " & ºTOTAL_INCOP & ", " & ºTOTAL_RELACIONAMENTO & ", " & ºTOTAL_DTAS & ", " & ºCOMISSAO_PREMIO & ", " & ºOUTRAS_COMERCIAL & ", " & ºADM_CARTEIRA _
+            & ", " & ºMEDIÇÃO & ", " & ºTXEMISSAO & ", " & ºOUTRAS_D & ", " & ºRESULTADO
+    InsertMatriz "valores_totais_capa", CAMPOS_CAPA, CStr(ºvalor)
+End Sub
+
+Sub PERFIS_VENDA_UPLOAD(ºIDChaveEstudo)
+    For ºL = 901 To 950
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value <> "" Then
+            'COD_PERFIL
+            ºCOD_PERFIL = "'" & Format(ºL - 900, "0000") & "'"
+            'DESCRIÇÃO
+            ºDESCRICAO = "'" & ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 2).Value & "'"
+            'CURVA DE VENDA
+            ºCURVA_VENDA = "'" & Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 3).Value, "0000") & "'"
+            'TABELA 1
+            ºTBL_1 = "''"
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 4).Value <> "" Then
+                ºTBL_1 = "'" & Format(Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 4).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 4).Value) - 2), "0000") & "'"
+            End If
+            'TABELA2
+            ºTBL_2 = "''"
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 5).Value <> "" Then
+                ºTBL_2 = "'" & Format(Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 5).Value) - 2), "0000") & "'"
+            End If
+            'TX_JUR
+            ºTX_JUR = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 6).Value <> "" Then ºTX_JUR = Replace(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 6).Value, "%", "") / 100, ",", ".")
+            'ASSOCIATIVO
+            ºAssociativo = 0
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 7).Value <> "" And ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 7).Value <> 0 Then ºAssociativo = 1
+            'INICIO POS
+            ºINI_POS = "''"
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 8).Value <> "" Then ºINI_POS = "'" & ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 8).Value & "'"
+            
+            
+            ºvalor = "'" & ºIDChaveEstudo & "', " & ºCOD_PERFIL & ", " & ºDESCRICAO & ", " _
+                    & ºCURVA_VENDA & ", " & ºTBL_1 & ", " & ºTBL_2 & ", " & ºTX_JUR & ", " & ºAssociativo _
+                    & ", " & ºINI_POS
+            InsertMatriz "perfil_de_venda", CAMPOS_PERFIL_VND, CStr(ºvalor)
+        End If
+    Next
+End Sub
+Sub LANÇAMENTOS_UPLOAD(ºIDChaveEstudo)
+    ºVALORES = SelectMatriz("tipos_de_lancamento", "descricao, Código", "", 2)
+    For ºL = 2 To ThisWorkbook.Sheets("Lançamentos").Cells(Rows.Count, 2).End(xlUp).Row
+        If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 2).Value <> "" Then
+            'FASE
+            ºFaseObra = "'" & Format(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 1).Value, "0000") & "'"
+            
+            'ID TIPO LANÇAMENTO
+            ºLCTO = ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 2).Value
+            ºTIPO_LCTO = "'" & Application.VLookup(ºLCTO, ºVALORES, 2, 0) & "'"
+            
+            'NUMERO DE PARCELAS
+            ºPARCELAS = 0
+            If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 5).Value <> "" Then ºPARCELAS = Replace(CDbl(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 5).Value), ",", ".")
+            
+            'ID TIPO PARCELA
+            ºPARC = Application.IfError(Application.Match(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 6).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("C523:C554"), 0), 0)
+            ºID_PARCELA = "'" & Format(ºPARC, "0000") & "'"
+            
+            'INICIO
+            ºINICIO = 0
+            If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 8).Value <> "" Then
+                ºINICIO = "'" & ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 8).Value & "'"
+            Else
+                If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 7).Value <> "" Then ºINICIO = "'" & Replace(CDbl(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 7).Value), ",", ".") & "'"
+            End If
+                        
+            'VALOR DO LANÇAMENTO
+            ºVLR_LCTO = 0
+            If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value <> "" Then ºVLR_LCTO = Replace(Round(CDbl(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value), 6), ",", ".")
+            
+            'USAR CURVA
+            ºU_CURVA = 0
+            If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 10).Value Then ºU_CURVA = 1
+            
+            'CURVA
+            ºPercentuais = "'"
+            For ºC = 11 To ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 112).End(xlToLeft).Column
+                If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, ºC).Value <> "" Then
+                    If ºPercentuais = "'" Then
+                        ºPercentuais = ºPercentuais & Replace(Replace(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, ºC).Value, "%", "") / 100, ",", ".")
+                    Else
+                        ºPercentuais = ºPercentuais & "/" & Replace(Replace(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, ºC).Value, "%", "") / 100, ",", ".")
+                    End If
+                End If
+            Next
+            ºPercentuais = ºPercentuais & "'"
+            
+            'DESCRIÇÃO
+            ºDESCRICAO = "'" & ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 112).Value & "'"
+            
+            'COMENTARIO
+            ºCOMENTARIO = "'" & ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 113).Value & "'"
+            ºvalor = "'" & ºIDChaveEstudo & "', " & ºFaseObra & ", " & ºTIPO_LCTO & ", " & ºPARCELAS & ", " & ºID_PARCELA & ", " & _
+                    ºINICIO & ", " & ºVLR_LCTO & ", " & ºU_CURVA & ", " & ºDESCRICAO & ", " & ºPercentuais & ", " & ºCOMENTARIO
+            InsertMatriz "lancamentos_manuais", CAMPOS_LANCAMENTO, CStr(ºvalor)
+        End If
+    Next
+End Sub
+
+Sub CRIAR_ESTUDO_2()
+    ºusuario = "00001"
+    ºDATABASE = DateValue(ActiveSheet.Range("D9").Text)
+    ºDATALCTO = DateValue(ActiveSheet.Range("I9").Text)
+    ºCRITERIOS = "(id_empreendimento=" & "'" & ºCODIGO_EMP("") & "'" & ") AND (id_area= '00001')"
+    ºVALORES = SelectNome("estudos", "id_chave_estudo", CStr(ºCRITERIOS))
+    If ºVALORES(0) = "VAZIO" Then
+        ºChave_estudo = "00001"
+    Else
+        ºChave_estudo = Format(CDbl(Right(ºVALORES(UBound(ºVALORES)), 5)) + 1, "00000")
+    End If
+    Dim ºCAMPOS, ºvalor As String
+    ºCAMPOS = "id_area, id_chave_estudo, id_empreendimento, descricao, Id_criador, data_criacao, Id_modificador," _
+                & " data_modificacao, data_base, data_lcto_fase1"
+    ºvalor = "'00001', '" & ºEMPREENDIMENTO & ºChave_estudo & "', '" & ºEMPREENDIMENTO & "', 'NOVO ESTUDO', '" & ºusuario & "', '" _
+                & Format(Now, "hh:mm dd/mm/yyyy") & "', '" & ºusuario & "', '" & Format(Now, "hh:mm dd/mm/yyyy") & "', '" & Format(ºDATABASE, "mm/yyyy") _
+                & "', '" & Format(ºDATALCTO, "mm/yyyy") & "'"
+    InsertMatriz "estudos", CStr(ºCAMPOS), ºvalor
+End Sub
+Sub Salvar_ESTUDO_SQL()
+    Dim ºCAMPOS, ºvalor, ºCRITERIOS As String
+    'ºCRITERIOS = "(alias_rede=" & "'" & ThisWorkbook.Sheets("BD_APOIO").Range("K10").Value & "'" & ")"
+    ºCRITERIOS = "(alias_rede=" & "'" & "WESLEYS" & "'" & ")"
+    ºVALORES = SelectNome("usuarios", "id_usuario", ºCRITERIOS)
+    ºusuario = ºVALORES(0)
+
+    '---------------------------------------------------------------------------------------
+    'LOCALIZAR ID AREA
+    ºAREA = "'" & Left(ºPASTA, Application.Search("-", ºPASTA) - 2) & "'"
+    ºregional = "'" & Right(ºPASTA, Len(ºPASTA) - Application.Search("-", ºPASTA) - 1) & "'"
+    ºCRITERIOS = "(regional=" & ºregional & ") AND (area=" & ºAREA & ")"
+    ºVALORES = SelectNome("areas", "id_area", CStr(ºCRITERIOS))
+    ºID_AREA = ºVALORES(0)
+    '----------------------------------------------------------------------------------------
+    
+    ºDataMOD = Now
+    '---------------------------------------------------------------------------------------
+    'INFO EMPREENDIMENTO
+    '----------------------------------------------------------------------------------------
+    ºCRITERIOS = "(id_empreendimento=" & "'" & Format(ºCODIGO_EMP(""), "000000") & "'" & ")"
+    ºVALORES = SelectNome("empreendimentos", "Id_criador", CStr(ºCRITERIOS))
+    If ºVALORES(0) = "VAZIO" Then
+        ºID_EMPREEDIMENTO = "'" & Format(ºCODIGO_EMP(""), "000000") & "'"
+        ºDESCRIÇÃO = "'" & ºNOME_EMP("") & "'"
+        '---------------------------------------------------------------------------------------
+        'LOCALIZAR ID CRIADOR
+        ºCRITERIOS = "(alias_rede=" & "'" & ThisWorkbook.Sheets("BD_APOIO").Range("K16").Value & "'" & ")"
+        ºVALORES = SelectNome("usuarios", "id_usuario", ºCRITERIOS)
+        ºCriador = ºVALORES(0)
+        '----------------------------------------------------------------------------------------
+        ºCRIAÇÃO = ThisWorkbook.Sheets("BD_APOIO").Range("K17").Value
+        
+        ºvalor = ºID_AREA & ", " & ºID_EMPREEDIMENTO & ", " & ºDESCRIÇÃO & ", " & ºCriador & ", '" & _
+                CDate(ºCRIAÇÃO) & "', " & ºusuario & ", '" & ºDataMOD & "'"
+        ºCAMPOS = "id_area, id_empreendimento, descricao, Id_criador, data_criacao, Id_modificador, data_modificacao"
+        InsertMatriz "empreendimentos", CStr(ºCAMPOS), CStr(ºvalor)
+    Else
+        ºCRITERIOS = "(id_empreendimento=" & "'" & Format(ºCODIGO_EMP(""), "000000") & "'" & ")"
+        ºvalor = "Id_modificador=" & ºusuario & ", data_modificacao='" & ºDataMOD & "'"
+        UpdateMatriz "empreendimentos", CStr(ºvalor), ºCRITERIOS
+    End If
+    
+    ºChave_estudo = ºCOD_VERSÃO("")
+    
+    'CHAVE DO ESTUDO
+    ºIDChaveEstudo = ºCODIGO_EMP("") & ºChave_estudo
+    
+    '---------------------------------------------------------------------------------------
+    'INFO ESTUDO
+    '----------------------------------------------------------------------------------------
+    ºCRITERIOS = "(id_chave_estudo=" & "'" & ºIDChaveEstudo & "'" & ")"
+    ºVALORES = SelectNome("estudos", "Id_criador", CStr(ºCRITERIOS))
+    ºObservações = ThisWorkbook.Sheets("BD_CAD_VND").Range("C898").Value
+    ºid_aprovador = 0
+    ºAvisos = "''"
+    If ºVALORES(0) = "VAZIO" Then
+        
+        ºID_EMPREEDIMENTO = "'" & Format(ºCODIGO_EMP(""), "000000") & "'"
+        ºDESCRIÇÃO = "'" & ºNOME_VERSÃO("") & "'"
+        '---------------------------------------------------------------------------------------
+        'LOCALIZAR ID CRIADOR
+        ºCRITERIOS = "(alias_rede=" & "'" & ThisWorkbook.Sheets("BD_APOIO").Range("K16").Value & "'" & ")"
+        ºVALORES = SelectNome("usuarios", "id_usuario", ºCRITERIOS)
+        ºCriador = ºVALORES(0)
+        If ºCriador = "VAZIO" Then ºCriador = "0001"
+        '----------------------------------------------------------------------------------------
+        ºCRIAÇÃO = ThisWorkbook.Sheets("BD_APOIO").Range("K17").Value
+        ºDataMOD = Now
+        
+        ºvalor = ºID_AREA & ", " & "'" & ºIDChaveEstudo & "', " & ºID_EMPREEDIMENTO & ", " & ºDESCRIÇÃO & ", " & ºCriador & ", '" & _
+                CDate(ºCRIAÇÃO) & "', " & ºusuario & ", '" & ºDataMOD & "', '" & CDate(ºDATA_BASE("")) & "', '" & CDate(ºDATA_FASE_1("")) & "', " _
+                & ºAvisos & ", '" & ºObservações & "', " & ºid_aprovador
+        ºCAMPOS = "id_area, id_chave_estudo, id_empreendimento, descricao, Id_criador, data_criacao, Id_modificador, data_modificacao, " & _
+                "data_base, data_lcto_fase1, avisos, observacoes, id_aprovador"
+        InsertMatriz "estudos", CStr(ºCAMPOS), CStr(ºvalor)
+    Else
+        ºCRITERIOS = "(id_chave_estudo=" & "'" & ºIDChaveEstudo & "'" & ")"
+        ºvalor = "Id_modificador=" & ºusuario & ", data_modificacao='" & ºDataMOD & "'"
+        UpdateMatriz "estudos", CStr(ºvalor), ºCRITERIOS
+    End If
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               TIPOLOGIAS
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "tipologias", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call TIPOLOGIAS_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               VAGAS EXTRAS
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "vagas_extras", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call VAGASEXTRAS_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               CURVAS DE VENDA
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "curvas_de_venda", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call CURVAS_VENDA_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               TABELAS DE VENDA
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "tabelas_de_venda", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call TABELA_VENDA_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               PERFIL DO ESTUDO
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "perfil_do_projeto", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call PERFIL_ESTUDO_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               CUSTO DE OBRA
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "fases_de_obra", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call CUSTO_OBRA_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               CURVAS DE OBRA
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "curvas_de_obra", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call CURVA_DE_OBRA_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               TERRENO
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "terreno", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call TERRENO_UPLOAD(ºIDChaveEstudo)
+
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               FINANCIAMENTO ASSOCIATIVO
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "financiamento_associativo", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call ASSOCIATIVO_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               INDICADORES CAPA
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "indicadores_capa", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call iCAPA_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               TOTAIS CAPA
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "valores_totais_capa", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call TOTAIS_CAPA_UPLOAD(ºIDChaveEstudo)
+    
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               PERFIL DE VENDA
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "perfil_de_venda", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call PERFIS_VENDA_UPLOAD(ºIDChaveEstudo)
+
+    '-----------------------------------------------------------------------------------------------------------------------
+    '                                               LANÇAMENTOS MANUAIS
+    '-----------------------------------------------------------------------------------------------------------------------
+    DeleteMatriz "lancamentos_manuais", "", "id_chave_estudo='" & ºIDChaveEstudo & "'"
+    Call LANÇAMENTOS_UPLOAD(ºIDChaveEstudo)
+
+End Sub
+
+
+Sub CARREGAR_VIABILIDADE_2()
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim D_SHT, F_SHT As Worksheet
+    Dim ºVALORES, ºPeriodicidades, ºtipo_lancamento As Variant
+    
+    'Call SU_Conectadb
+    Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+        
+    '----------------------------------------------------------------------------------------
+    '                                   Nome
+    '----------------------------------------------------------------------------------------
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("estudos"), "descricao, data_base, data_lcto_fase1", CStr(ºCRITERIOS), "", 3)
+    
+    'Nome Versão
+    ºNOME_VERSÃO (ºVALORES(0, 0))
+    'Data Base
+    ºDATA_BASE (ºVALORES(0, 1))
+    'Data Lançamento
+    ºDATA_FASE_1 (ºVALORES(0, 2))
+    
+    '----------------------------------------------------------------------------------------
+    '                                   Tipologias
+    '----------------------------------------------------------------------------------------
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz("tipologias", CAMPOS_TIPOLOGIAS, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_TIPOLOGIAS, ",")) + 1)
+    D_SHT.Range("A3:N33").Value = ""
+    D_SHT.Range("B3:B33").Value = False
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        ºL = 3
+        For ºR = 0 To UBound(ºVALORES)
+            'FASE
+            D_SHT.Range("B" & ºL).Value = True
+            D_SHT.Range("C" & ºL).Value = CDbl(ºVALORES(ºR, 2))
+            
+            'DESCRIÇÃO
+            D_SHT.Range("D" & ºL).Value = ºVALORES(ºR, 3)
+            
+            'UNIDADES
+            D_SHT.Range("E" & ºL).Value = ºVALORES(ºR, 4)
+            
+            'PERMUTAS
+            D_SHT.Range("F" & ºL).Value = ºVALORES(ºR, 5)
+            
+            'AREA COBERTA
+            D_SHT.Range("G" & ºL).Value = ºVALORES(ºR, 6)
+            
+            'AREA DESCOBERTA
+            D_SHT.Range("H" & ºL).Value = ºVALORES(ºR, 7)
+            
+            'FATOR
+            D_SHT.Range("I" & ºL).Value = Format(ºVALORES(ºR, 8), "0.00%")
+            
+            'PREÇO M2
+            D_SHT.Range("J" & ºL).Value = ºVALORES(ºR, 9)
+            
+            'VAGAS
+            D_SHT.Range("K" & ºL).Value = ºVALORES(ºR, 10)
+            
+            'PERFIL
+            D_SHT.Range("N" & ºL).Value = ºVALORES(ºR, 11)
+            ºL = ºL + 1
+        Next
+    End If
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Vagas Extras
+    '----------------------------------------------------------------------------------------
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz("vagas_extras", CAMPOS_VAGAS, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_TIPOLOGIAS, ",")) + 1)
+    D_SHT.Range("A35:H55").Value = ""
+    D_SHT.Range("B35:B55").Value = False
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        'D_SHT.Range("A35:H55").Value = F_SHT.Range("A35:H55").Value
+    End If
+    '----------------------------------------------------------------------------------------
+    '                                   Curvas de Vendas
+    '----------------------------------------------------------------------------------------
+    
+    D_SHT.Range("A57:N106").Value = ""
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz("curvas_de_venda", CAMPOS_CURVAS_VND, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_CURVAS_VND, ",")) + 1)
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        ºC = 3
+        For ºR = 0 To UBound(ºVALORES)
+            If ºR > 0 Then
+                If ºVALORES(ºR, 3) <> ºVALORES(ºR - 1, 3) Then ºC = 3
+            End If
+            'DESCRIÇÃO
+            D_SHT.Range("B" & 56 + ºVALORES(ºR, 3)).Value = ºVALORES(ºR, 3)
+            'PERCENTUAL
+            D_SHT.Cells(56 + ºVALORES(ºR, 3), ºC).Value = Format(ºVALORES(ºR, 6), "0.00%")
+            ºC = ºC + 1
+            'DURAÇÃO
+            D_SHT.Cells(56 + ºVALORES(ºR, 3), ºC).Value = ºVALORES(ºR, 5)
+            ºC = ºC + 1
+            'INICIO
+            D_SHT.Cells(56 + ºVALORES(ºR, 3), ºC).Value = ºVALORES(ºR, 4)
+            ºC = ºC + 1
+        Next
+    End If
+    '----------------------------------------------------------------------------------------
+    '                                   Tabela de Vendas
+    '----------------------------------------------------------------------------------------
+    D_SHT.Range("A108:NA157").Value = ""
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("tabelas_de_venda"), CAMPOS_TBL_VENDA, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_TBL_VENDA, ",")) + 1)
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        ºC = 3
+        ºCod = ºVALORES(0, 1)
+        For ºR = 0 To UBound(ºVALORES)
+            If ºCod <> ºVALORES(ºR, 1) Then
+                ºCod = ºVALORES(ºR, 1)
+                ºC = 3
+            End If
+            
+            'DESCRIÇÃO
+            D_SHT.Range("B" & 107 + ºCod).Value = ºVALORES(ºR, 2)
+            
+            'TIPO
+            D_SHT.Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 3)
+            ºC = ºC + 1
+            
+            'QUANTIDADE
+            D_SHT.Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 4)
+            ºC = ºC + 1
+            
+            'INICIO
+            D_SHT.Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 5)
+            ºC = ºC + 1
+            
+            'PERCENTUAL
+            D_SHT.Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 6)
+            D_SHT.Cells(107 + ºCod, ºC).NumberFormat = "0.00%"
+            ºC = ºC + 1
+            
+            'JUROS
+            If CBool(ºVALORES(ºR, 7)) Then D_SHT.Cells(107 + ºCod, ºC).Value = 1 Else D_SHT.Cells(107 + ºCod, ºC).Value = 0
+            ºC = ºC + 1
+            
+            'INI JUR
+            D_SHT.Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 8)
+            ºC = ºC + 1
+            
+            'FX INI
+            If CBool(ºVALORES(ºR, 9)) Then D_SHT.Cells(107 + ºCod, ºC).Value = 1 Else D_SHT.Cells(107 + ºCod, ºC).Value = 0
+            ºC = ºC + 1
+            
+            'FX FIM
+            If CBool(ºVALORES(ºR, 10)) Then D_SHT.Cells(107 + ºCod, ºC).Value = 1 Else D_SHT.Cells(107 + ºCod, ºC).Value = 0
+            ºC = ºC + 1
+            
+            'FIM
+            D_SHT.Cells(107 + ºCod, ºC).Value = ºVALORES(ºR, 11)
+            ºC = ºC + 1
+        Next
+    End If
+    '----------------------------------------------------------------------------------------
+    '                                   Perfil de Taxas
+    '----------------------------------------------------------------------------------------
+    D_SHT.Range("A159:T208").ClearContents
+    'D_SHT.Range("A159:T208").NumberFormat = "@"
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("perfil_do_projeto"), CAMPOS_PERFIL_ESTD, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_PERFIL_ESTD, ",")) + 1)
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        For ºR = 0 To UBound(ºVALORES)
+            'Status
+            D_SHT.Cells(159 + ºR, 2).Value = True
+            
+            'DESCRIÇÃO
+            D_SHT.Cells(159 + ºR, 3).Value = ºVALORES(ºR, 1)
+            
+            'REGIME
+            If ºVALORES(ºR, 2) = 1 Then D_SHT.Cells(159 + ºR, 4).Value = "RET" Else: D_SHT.Cells(159 + ºR, 4).Value = "PIS"
+           
+            'PERCENTUAL 1
+            If D_SHT.Cells(159 + ºR, 4).Value = "RET" Then
+                D_SHT.Cells(159 + ºR, 5).Value = Format(ºVALORES(ºR, 3), "0.0000%")
+            Else
+                D_SHT.Cells(159 + ºR, 6).Value = Format(ºVALORES(ºR, 3), "0.0000%")
+            End If
+            
+            'PERCENTUAL 2
+            If D_SHT.Cells(159 + ºR, 4).Value <> "RET" Then
+               D_SHT.Cells(159 + ºR, 7).Value = Format(ºVALORES(ºR, 4), "0.0000%")
+            End If
+            
+            'COMISSÃO INDIRETA
+            D_SHT.Cells(159 + ºR, 8).Value = Format(ºVALORES(ºR, 6), "0.0000%")
+            'MAJORAR COMISSÃO INDIRETA
+            D_SHT.Range("C891").Value = ºVALORES(ºR, 7)
+            
+            'COMISSÃO DIRETA
+            D_SHT.Cells(159 + ºR, 9).Value = Format(ºVALORES(ºR, 8), "0.0000%")
+            
+            'MARKETING
+            D_SHT.Cells(159 + ºR, 10).Value = Format(ºVALORES(ºR, 9), "0.0000%")
+            'MAJORAR MARKETING
+            D_SHT.Range("C887").Value = ºVALORES(ºR, 10)
+            
+            'PDV
+            D_SHT.Cells(159 + ºR, 11).Value = Format(ºVALORES(ºR, 11), "0.0000%")
+            'MAJORAR PDV
+            D_SHT.Range("C888").Value = ºVALORES(ºR, 12)
+            
+            'E-BUSINESS
+            D_SHT.Cells(159 + ºR, 12).Value = Format(ºVALORES(ºR, 13), "0.0000%")
+            'MAJORAR E-BUSINESS
+            D_SHT.Range("C889").Value = ºVALORES(ºR, 14)
+            
+            'PREMIO
+            D_SHT.Cells(159 + ºR, 13).Value = Format(ºVALORES(ºR, 15), "0.0000%")
+            'MAJORAR PREMIO
+            D_SHT.Range("C892").Value = ºVALORES(ºR, 16)
+            
+            'TAXA VP
+            D_SHT.Cells(159 + ºR, 18).Value = Format(ºVALORES(ºR, 17), "0.0000%")
+            
+            'ADM CARTEIRA
+            D_SHT.Cells(159 + ºR, 19).Value = Format(ºVALORES(ºR, 18), "0.0000%")
+            'MAJORAR ADM CARTEIRA
+            D_SHT.Range("C890").Value = ºVALORES(ºR, 19)
+        Next
+    End If
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Custo de Obra
+    '----------------------------------------------------------------------------------------
+    D_SHT.Range("A210:NA259").Value = ""
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("fases_de_obra"), CAMPOS_FASE_OBRA, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_FASE_OBRA, ",")) + 1)
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        For ºR = 0 To UBound(ºVALORES)
+            'Fase
+            D_SHT.Cells(210 + ºR, 2).Value = CDbl(ºVALORES(ºR, 1))
+            
+            'Curva
+            D_SHT.Cells(210 + ºR, 3).Value = CDbl(ºVALORES(ºR, 2))
+            
+            'Area Construida
+            D_SHT.Cells(210 + ºR, 4).Value = ºVALORES(ºR, 3)
+            
+            'Area Privativa
+            D_SHT.Cells(210 + ºR, 5).Value = ºVALORES(ºR, 4)
+            
+            'Custo do m² construido
+            D_SHT.Cells(210 + ºR, 6).Value = ºVALORES(ºR, 5)
+            
+            'Custo do m² Privativo
+            D_SHT.Cells(210 + ºR, 7).Value = ºVALORES(ºR, 6)
+            
+            'Taxa Adm Gerencial
+            D_SHT.Cells(210 + ºR, 8).Value = Format(ºVALORES(ºR, 7), "0.00%")
+            
+            'Taxa adm Externa
+            D_SHT.Cells(210 + ºR, 9).Value = Format(ºVALORES(ºR, 8), "0.00%")
+            
+            'Taxa DTAS
+            D_SHT.Cells(210 + ºR, 10).Value = Format(ºVALORES(ºR, 9), "0.00%")
+            
+            'Inicio
+            D_SHT.Cells(210 + ºR, 11).Value = ºVALORES(ºR, 10)
+            
+            'incorrido
+            D_SHT.Cells(210 + ºR, 19).Value = ºVALORES(ºR, 11)
+            
+            'Valor da Curva
+            D_SHT.Cells(210 + ºR, 14).Value = ºVALORES(ºR, 12)
+            
+            ' Valor Marjorado
+            ºC = Application.Match("Valor Marjorado", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(210 + ºR, ºC).FormulaR1C1 = "=(((RC[-1]+RC[4])*R1C17)/(SUMPRODUCT(RC[-7]:RC[-5]*1)+1))-RC[4]"
+            ' Valor taxa gererncial
+            ºC = Application.Match("Valor taxa gererncial", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(210 + ºR, ºC).Value = "=RC[-1]*RC[-8]"
+            ' Valor taxa gererncial
+            ºC = Application.Match("Valor taxa efetiva", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(210 + ºR, ºC).Value = "=RC[-2]*RC[-8]"
+            ' Valor Dtas
+            ºC = Application.Match("Valor Dtas", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(210 + ºR, ºC).Value = "=RC[-3]*RC[-8]"
+        Next
+    End If
+    '----------------------------------------------------------------------------------------
+    '                                   Curva de Obra
+    '----------------------------------------------------------------------------------------
+    D_SHT.Range("B260:NA461").Value = ""
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("curvas_de_obra"), CAMPOS_CURVAS_OBRA, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_CURVAS_OBRA, ",")) + 1)
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        For ºR = 0 To UBound(ºVALORES)
+            'Curva
+            D_SHT.Cells(260, 1 + CDbl(ºVALORES(ºR, 1))).Value = ºVALORES(ºR, 2)
+            
+            'inicio
+            'D_SHT.Cells(210 + ºR, 4).Value = ºVALORES(ºR, 3)
+            
+            'percentuais
+            ºL = 262
+            For Each ºPERCENTUAL In Split(ºVALORES(ºR, 3), "/")
+                D_SHT.Cells(ºL, 1 + CDbl(ºVALORES(ºR, 1))).NumberFormat = "0.00000000%"
+                D_SHT.Cells(ºL, 1 + CDbl(ºVALORES(ºR, 1))).Value = CDbl(Replace(ºPERCENTUAL, ".", ",")) * 100
+                ºL = ºL + 1
+            Next
+        Next
+    End If
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Terreno
+    '----------------------------------------------------------------------------------------
+    D_SHT.Range("C462:C471").Value = ""
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("terreno"), CAMPOS_TERRENO, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_TERRENO, ",")) + 1)
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        'Area Terreno
+        D_SHT.Cells(462, 3).Value = Format(ºVALORES(0, 1), "##,##0.00")
+        
+        'Permutado
+        D_SHT.Cells(463, 3).Value = Format(ºVALORES(0, 2), "0.00%")
+        
+        'Permuta Financeira
+        D_SHT.Cells(464, 3).Value = Format(ºVALORES(0, 3), "0.00%")
+        
+        'Modelo Permuta Financeira
+        If ºVALORES(0, 15) Then D_SHT.Cells(464, 4).Value = 2 Else D_SHT.Cells(464, 4).Value = 1
+        
+        'Valor do Terreno Fiscal
+        D_SHT.Cells(465, 3).Value = Format(ºVALORES(0, 4), "##,##0.00")
+
+        'Valor da Permuta Fisica
+        D_SHT.Cells(466, 3).Value = Format(ºVALORES(0, 5), "##,##0.00")
+        
+        'Imposto Permuta Fisica
+        D_SHT.Cells(467, 3).Value = Format(ºVALORES(0, 6), "0.00%")
+            
+        'Pagamento Imposto Permuta Fisica
+        D_SHT.Cells(468, 3).Value = ºVALORES(0, 7)
+        
+        'ITBI
+        D_SHT.Cells(469, 3).Value = Format(ºVALORES(0, 8), "0.00%")
+    
+        'Pagamento ITBI
+        D_SHT.Cells(470, 3).Value = ºVALORES(0, 9)
+        
+        'Valor do terreno não Permutado
+        D_SHT.Cells(471, 3).Value = ºVALORES(0, 4) * (1 - ºVALORES(0, 2))
+        
+        'PARTICIPAÇÃO PERMUTA
+        
+        'PARTICIPAÇÃO PERMUTA FISICA
+        D_SHT.Cells(882, 3).Value = Format(ºVALORES(0, 10), "0.00%")
+        
+        'PARTICIPAÇÃO PERMUTA FINANCEIRA
+        D_SHT.Cells(883, 3).Value = Format(ºVALORES(0, 11), "0.00%")
+        
+        'PARTICIPAÇÃO PERMUTA FINANCEIRA RET
+        D_SHT.Cells(884, 3).Value = Format(ºVALORES(0, 12), "0.00%")
+        
+        'PARTICIPAÇÃO PERMUTA FINANCEIRA IRCLSS
+        D_SHT.Cells(885, 3).Value = Format(ºVALORES(0, 13), "0.00%")
+        
+        'PARTICIPAÇÃO PERMUTA FINANCEIRA PISCOFINS
+        D_SHT.Cells(886, 3).Value = Format(ºVALORES(0, 14), "0.00%")
+                
+    
+    End If
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Associativo
+    '----------------------------------------------------------------------------------------
+    D_SHT.Range("C481:C490").Value = ""
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("financiamento_associativo"), CAMPOS_ASSOCIATIVO, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_ASSOCIATIVO, ",")) + 1)
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        If ºVALORES(0, 1) Then
+            D_SHT.Range("B480").Value = True
+            
+            'Taxa Medição de Obra
+            D_SHT.Cells(481, 3).Value = Format(ºVALORES(0, 2), "##,##0.00")
+            
+            'Deflação
+            D_SHT.Cells(482, 3).Value = Format(ºVALORES(0, 3), "0.00%")
+            
+            'Seguro de Obra
+            D_SHT.Cells(483, 3).Value = Format(ºVALORES(0, 4), "0.00%")
+            
+            'Taxa Adm
+            D_SHT.Cells(484, 3).Value = Format(ºVALORES(0, 5), "##,##0.00")
+            
+            'Taxa emissão de contrato
+            D_SHT.Cells(485, 3).Value = Format(ºVALORES(0, 6), "##,##0.00")
+            
+            'Prazo para liberação
+            D_SHT.Cells(486, 3).Value = ºVALORES(0, 7)
+            
+            'Prazo ultimos 5% de obra
+            D_SHT.Cells(487, 3).Value = ºVALORES(0, 8)
+            
+            'Prazo Documentação
+            D_SHT.Cells(488, 3).Value = ºVALORES(0, 9)
+            
+            'Valor do terreno a VP
+            D_SHT.Cells(489, 3).Value = Format(ºVALORES(0, 10), "##,##0.00")
+            
+            'Modelo de deflação
+            If ºVALORES(0, 11) = 1 Then D_SHT.Cells(490, 3).Value = "Primeira Venda"
+            If ºVALORES(0, 11) = 2 Then D_SHT.Cells(490, 3).Value = "Venda da Unidade"
+            If ºVALORES(0, 11) = 3 Then D_SHT.Cells(490, 3).Value = "Inicio do Repasse"
+            
+        End If
+    End If
+                        
+    '----------------------------------------------------------------------------------------
+    '                                   Tipos de Lançamento
+    '----------------------------------------------------------------------------------------
+    'D_SHT.Range("B901:NA950").Value = ""
+    'ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("tipos_de_lancamento"), "descricao, classe_custo, fator_calculo", "", "", 3)
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        For ºR = 0 To UBound(ºVALORES)
+            'Descrição
+            D_SHT.Cells(581 + ºR, 2).Value = ºVALORES(ºR, 0)
+            
+            'PEP RELACIONADO
+            D_SHT.Cells(581 + ºR, 3).Value = ºVALORES(ºR, 1)
+            
+            'FORMA DE CALCULO
+            D_SHT.Cells(581 + ºR, 4).Value = ºVALORES(ºR, 2)
+        Next
+    End If
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Perfil de Venda
+    '----------------------------------------------------------------------------------------
+    D_SHT.Range("B901:NA950").Value = ""
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("perfil_de_venda"), CAMPOS_PERFIL_VND, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_PERFIL_VND, ",")) + 1)
+    
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        For ºR = 0 To UBound(ºVALORES)
+            'Codigo
+            D_SHT.Cells(901 + ºR, 1).Value = ºVALORES(ºR, 1)
+            
+            'Descrição
+            D_SHT.Cells(901 + ºR, 2).Value = ºVALORES(ºR, 2)
+            
+            'Curva de venda
+            D_SHT.Cells(901 + ºR, 3).Value = CDbl(ºVALORES(ºR, 3))
+            
+            'Tabela de Venda Padrão
+            D_SHT.Cells(901 + ºR, 4).Value = CDbl(ºVALORES(ºR, 4)) & " | " & D_SHT.Range("B" & 107 + CDbl(ºVALORES(ºR, 4))).Value
+            
+            'Tabela de Venda pos entrega
+            If ºVALORES(ºR, 5) <> "" Then
+                D_SHT.Cells(901 + ºR, 5).Value = CDbl(ºVALORES(ºR, 5)) & " | " & D_SHT.Range("B" & 107 + CDbl(ºVALORES(ºR, 5))).Value
+            Else
+                D_SHT.Cells(901 + ºR, 5).Value = ""
+            
+            End If
+            'Taxa Juros TP
+            D_SHT.Cells(901 + ºR, 6).Value = Format(ºVALORES(ºR, 6), "0.00%")
+            
+            'Associativo
+            D_SHT.Cells(901 + ºR, 7).Value = ºVALORES(ºR, 7)
+            
+            'Inicio Pos
+            D_SHT.Cells(901 + ºR, 8).Value = ºVALORES(ºR, 8)
+            
+        Next
+    End If
+            
+    '----------------------------------------------------------------------------------------
+    '                                   Lançamentos
+    '----------------------------------------------------------------------------------------
+    Set D_SHT = ThisWorkbook.Sheets("Lançamentos")
+    D_SHT.Calculate
+    D_SHT.Range("A2:NA900").Value = ""
+    ºCRITERIOS = "(id_chave_estudo='" & ºCODIGO_EMP("") & ºCOD_VERSÃO("") & "')"
+    ºVALORES = SelectMatriz(CStr("lancamentos_manuais"), CAMPOS_LANCAMENTO, CStr(ºCRITERIOS), "", UBound(Split(CAMPOS_LANCAMENTO, ",")) + 1)
+    ºPeriodicidades = SelectMatriz(CStr("tipos_de_parcela"), "id_tipo_parcela, periodicidade, descricao", "", "", 3)
+    ºtipo_lancamento = SelectMatriz(CStr("tipos_de_lancamento"), "Código, descricao, classe_custo, fator_calculo", "", "", 4)
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        For ºR = 0 To UBound(ºVALORES)
+            'Fase
+            D_SHT.Cells(2 + ºR, 1).Value = CDbl(ºVALORES(ºR, 1))
+            
+            If ºVALORES(ºR, 2) <> "VAZIO" Then
+                'Tipo Lançamento
+                D_SHT.Cells(2 + ºR, 2).Value = Application.VLookup(CDbl(ºVALORES(ºR, 2)), ºtipo_lancamento, 2, 0)
+                
+                'PEP Relacionado
+                D_SHT.Cells(2 + ºR, 3).Value = Application.VLookup(CDbl(ºVALORES(ºR, 2)), ºtipo_lancamento, 3, 0)
+                
+                'Fator de Cálculo
+                D_SHT.Cells(2 + ºR, 4).Value = Application.VLookup(CDbl(ºVALORES(ºR, 2)), ºtipo_lancamento, 4, 0)
+            End If
+            
+            'Parcelas
+            D_SHT.Cells(2 + ºR, 5).Value = ºVALORES(ºR, 3)
+            
+            'Id Periodicidade
+            If ºVALORES(ºR, 4) = 9900 Then
+                D_SHT.Cells(2 + ºR, 6).Value = "Curva de Obra"
+            Else
+                D_SHT.Cells(2 + ºR, 6).Value = Application.VLookup(ºVALORES(ºR, 4), ºPeriodicidades, 3, 0)
+            End If
+            
+            'Inicio
+            If Len(ºVALORES(ºR, 5)) < 5 Then
+                D_SHT.Cells(2 + ºR, 7).Value = ºVALORES(ºR, 5)
+            Else
+                D_SHT.Cells(2 + ºR, 7).Value = DIF_DT_LCTO(ºVALORES(ºR, 5), 0)
+                D_SHT.Cells(2 + ºR, 8).Value = ºVALORES(ºR, 5)
+            End If
+            
+            'Valor
+            If Application.IfError(Application.Search("%", D_SHT.Cells(2 + ºR, 4).Value), 0) > 0 Then
+                D_SHT.Cells(2 + ºR, 9).Value = Replace(Format(ºVALORES(ºR, 6), "0.0000"), ",", ".")
+            Else
+                D_SHT.Cells(2 + ºR, 9).Value = Format(ºVALORES(ºR, 6), "##,##0.00")
+            End If
+            
+            'Usar Curva
+            D_SHT.Cells(2 + ºR, 10).Value = ºVALORES(ºR, 7)
+            
+            'percentuais
+            If ºVALORES(ºR, 7) Then
+                ºC = 11
+                For Each ºPERCENTUAL In Split(ºVALORES(ºR, 9), "/")
+                    D_SHT.Cells(2 + ºR, ºC).NumberFormat = "0.00000000%"
+                    D_SHT.Cells(2 + ºR, ºC).Value = CDbl(Replace(ºPERCENTUAL, ".", ",")) * 100
+                    ºC = ºC + 1
+                Next
+            End If
+            
+           'Descrição
+            D_SHT.Cells(2 + ºR, 112).Value = ºVALORES(ºR, 8)
+            
+            'Comentário
+            D_SHT.Cells(2 + ºR, 113).Value = ºVALORES(ºR, 10)
+
+        Next
+    End If
+    
+    Set D_SHT = ThisWorkbook.Sheets("BD_CAD_VND")
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 498).Value = ""
+    Call CARREGAR_FLUXO
+     
+    Application.DisplayAlerts = True
+End Sub

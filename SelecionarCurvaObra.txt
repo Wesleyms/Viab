@@ -1,0 +1,441 @@
+VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} SelecionarCurvaObra 
+   ClientHeight    =   8610
+   ClientLeft      =   45
+   ClientTop       =   375
+   ClientWidth     =   6240
+   OleObjectBlob   =   "SelecionarCurvaObra.frx":0000
+   ShowModal       =   0   'False
+   StartUpPosition =   2  'CenterScreen
+End
+Attribute VB_Name = "SelecionarCurvaObra"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+
+Private Sub BT_EDIT_TBL_Click()
+    ºNome = LV_Curvas_Estd.SelectedItem.SubItems(1)
+    If MsgBox("Confirma o compartilhamento da curva?", vbYesNo) = vbYes And ºNome <> "" Then
+        ºLins = ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, CDbl(LV_Curvas_Estd.SelectedItem) + 1).End(xlUp).Row
+        ºVALORES = ThisWorkbook.Sheets("BD_CAD_VND").Range(Cells(262, CDbl(LV_Curvas_Estd.SelectedItem) + 1).Address & ":" & Cells(ºLins, CDbl(LV_Curvas_Estd.SelectedItem) + 1).Address)
+        If UBound(ºVALORES) > 1 Then
+            '---------------------------------------------------------------------------------------
+            'LOCALIZAR ID AREA
+            ºAREA = "'" & Left(ºPASTA, Application.Search("-", ºPASTA) - 2) & "'"
+            ºregional = "'" & Right(ºPASTA, Len(ºPASTA) - Application.Search("-", ºPASTA) - 1) & "'"
+            ºCRITERIOS = "(regional=" & ºregional & ") AND (area=" & ºAREA & ")"
+            ºVALORES = SelectNome("areas", "id_area", CStr(ºCRITERIOS))
+            ºID_AREA = ºVALORES(0)
+            '----------------------------------------------------------------------------------------
+            ºVALORES = ThisWorkbook.Sheets("BD_CAD_VND").Range(Cells(262, CDbl(LV_Curvas_Estd.SelectedItem) + 1).Address & ":" & Cells(ºLins, CDbl(LV_Curvas_Estd.SelectedItem) + 1).Address)
+            ºPercentuais = ""
+            For Each ºVlr In ºVALORES
+                If ºVlr <> "" Then
+                    ºPercentuais = ºPercentuais & Replace(Round(CDbl(ºVlr), 12), ",", ".") & "/"
+                End If
+            Next
+             
+            InsertMatriz "bd_curvas_de_obra", "regional, descricao, percentuais", CStr("'" & ºID_AREA & "', '" & ºNome & "', '" & ºPercentuais & "'")
+        Else
+            MsgBox "copie uma curva válida"
+        End If
+        CARREGAR_CURVAS_BD
+        MultiPage1.Value = 1
+    End If
+End Sub
+
+Private Sub CommandButton1_Click()
+    ºVALORES = Split(LV_Curvas.SelectedItem.SubItems(3), "/")
+    ºC = ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column + 1
+    ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value = LV_Curvas.SelectedItem.SubItems(1)
+    ºL = 1
+    For Each ºVlr In ºVALORES
+        If ºVlr <> "" Then
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(261 + ºL, ºC).NumberFormat = "0.00000%"
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(261 + ºL, ºC).Value = FormatarNum_dbl(CStr(Replace(ºVlr, ".", ",")))
+        End If
+        ºL = ºL + 1
+    Next
+    MsgBox "Curva importada para o estudo!!"
+    Carregar_curvas_estudo
+    MultiPage1.Value = 0
+End Sub
+
+Private Sub CommandButton2_Click()
+    If MsgBox("Confirma a exclusão da Curva Selecionada?", vbYesNo) = vbYes Then
+        DeleteMatriz "bd_curvas_de_obra", "*", "Código=" & LV_Curvas.SelectedItem
+        CARREGAR_CURVAS_BD
+    End If
+End Sub
+
+Private Sub CommandButton3_Click()
+    ºNome = InputBox("Informe o Nome da nova Curva", "")
+    If MsgBox("Deseja ler as informações na area de tranferência?", vbYesNo) = vbYes And ºNome <> "" Then
+        Dim DT As New MSForms.DataObject
+        DT.GetFromClipboard
+        ºVALORES = Split(DT.GetText, Chr(10))
+        If UBound(ºVALORES) > 1 Then
+            'Validar Curva
+            For Each ºVlr In ºVALORES
+                If ºVlr <> "" Then
+                    ºTotal = ºTotal + FormatarNum_dbl(CStr(ºVlr))
+                End If
+            Next
+            If Round(ºTotal, 0) <> 1 Then
+                MsgBox "A curva selecionada não totaliza 100%"
+            Else
+                '---------------------------------------------------------------------------------------
+                'LOCALIZAR ID AREA
+                ºAREA = "'" & Left(ºPASTA, Application.Search("-", ºPASTA) - 2) & "'"
+                ºregional = "'" & Right(ºPASTA, Len(ºPASTA) - Application.Search("-", ºPASTA) - 1) & "'"
+                ºCRITERIOS = "(regional=" & ºregional & ") AND (area=" & ºAREA & ")"
+                ºVALORES = SelectNome("areas", "id_area", CStr(ºCRITERIOS))
+                ºID_AREA = ºVALORES(0)
+                '----------------------------------------------------------------------------------------
+                ºVALORES = Split(DT.GetText, Chr(10))
+                ºPercentuais = ""
+                For Each ºVlr In ºVALORES
+                    If ºVlr <> "" Then
+                        ºPercentuais = ºPercentuais & Replace(FormatarNum_dbl(CStr(ºVlr)), ",", ".") & "/"
+                    End If
+                Next
+                 
+                InsertMatriz "bd_curvas_de_obra", "regional, descricao, percentuais", CStr("'" & ºID_AREA & "', '" & ºNome & "', '" & ºPercentuais & "'")
+            End If
+        Else
+            MsgBox "copie uma curva válida"
+        End If
+        CARREGAR_CURVAS_BD
+    ElseIf ºNome <> "" Then
+        With Application.FileDialog(msoFileDialogOpen)
+            .Filters.Clear
+            .Filters.Add "Arquivo do Excel", "*.xls*"
+            .Show
+            If .SelectedItems.Count > 0 Then ºARQUIVO_FONTE = .SelectedItems(1)
+        End With
+        If ºARQUIVO_FONTE <> "" Then
+            Workbooks.Open ºARQUIVO_FONTE, False, True
+            If Workbooks(Dir(ºARQUIVO_FONTE)).Sheets(1).Cells(Rows.Count, 1).End(xlUp).Row > 1 Then
+                For ºL = 1 To Workbooks(Dir(ºARQUIVO_FONTE)).Sheets(1).Cells(Rows.Count, 1).End(xlUp).Row
+                    If ºVlr <> "" Then
+                        ºTotal = ºTotal + FormatarNum_dbl(CStr(Workbooks(Dir(ºARQUIVO_FONTE)).Sheets(1).Cells(ºL, 1).Value))
+                    End If
+                Next
+                If Round(ºTotal, 0) <> 1 Then
+                    MsgBox "A curva selecionada não totaliza 100%"
+                Else
+                    ºPercentuais = ""
+                    For Each ºVlr In ºVALORES
+                        If ºVlr <> "" Then
+                            ºPercentuais = ºPercentuais & Replace(FormatarNum_dbl(CStr(ºVlr)), ",", ".") & "/"
+                        End If
+                    Next
+                    '---------------------------------------------------------------------------------------
+                    'LOCALIZAR ID AREA
+                    ºAREA = "'" & Left(ºPASTA, Application.Search("-", ºPASTA) - 2) & "'"
+                    ºregional = "'" & Right(ºPASTA, Len(ºPASTA) - Application.Search("-", ºPASTA) - 1) & "'"
+                    ºCRITERIOS = "(regional=" & ºregional & ") AND (area=" & ºAREA & ")"
+                    ºVALORES = SelectNome("areas", "id_area", CStr(ºCRITERIOS))
+                    ºID_AREA = ºVALORES(0)
+                    '----------------------------------------------------------------------------------------
+                    
+                    InsertMatriz "bd_curvas_obra", "regional, descricao, percentuais", CStr("'" & ºID_AREA & "', '" & ºNome & "', '" & ºPercentuais & "'")
+                End If
+            End If
+            Workbooks(Dir(ºARQUIVO_FONTE)).Close , False
+            Workbooks(ºARQUIVO).Close True
+        End If
+        CARREGAR_CURVAS_BD
+    End If
+End Sub
+
+Private Sub Label298_Click()
+
+End Sub
+
+Private Sub MultiPage1_Change()
+    REFRESH_lv
+End Sub
+
+Private Sub OBSERVACAO_Afterupdate()
+    If OBSERVACAO.Value <> "" Then
+        UpdateMatriz "bd_curvas_de_obra", "Observacoes='" & OBSERVACAO.Value & "'", "Código=" & LV_Curvas.SelectedItem
+        CARREGAR_CURVAS_BD
+    End If
+End Sub
+
+Private Sub UserForm_Initialize()
+    Carregar_curvas_estudo
+    CARREGAR_CURVAS_BD
+End Sub
+Sub REFRESH_lv()
+    LV_Curvas.Visible = False
+    LV_Curvas_Estd.Visible = False
+    lv_prcnt_curvas.Visible = False
+    LV_Percentuais.Visible = False
+    DoEvents
+    LV_Curvas.Visible = True
+    LV_Curvas_Estd.Visible = True
+    lv_prcnt_curvas.Visible = True
+    LV_Percentuais.Visible = True
+End Sub
+Sub CARREGAR_CURVAS_BD()
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim ºARQUIVO As String
+    LV_Curvas.ColumnHeaders.Clear
+    LV_Curvas.ListItems.Clear
+    LV_Curvas.ColumnHeaders.Add , , "ID", 20
+    LV_Curvas.ColumnHeaders.Add , , "DESCRIÇÃO", 100
+    LV_Curvas.ColumnHeaders.Add , , "MESES", 44
+    LV_Curvas.ColumnHeaders.Add , , "VALOR", 0
+    LV_Curvas.ColumnHeaders.Add , , "OBSERVAÇÃO", 0
+    '---------------------------------------------------------------------------------------
+    'LOCALIZAR ID AREA
+    ºAREA = "'" & Left(ºPASTA, Application.Search("-", ºPASTA) - 2) & "'"
+    ºregional = "'" & Right(ºPASTA, Len(ºPASTA) - Application.Search("-", ºPASTA) - 1) & "'"
+    ºCRITERIOS = "(regional=" & ºregional & ") AND (area=" & ºAREA & ")"
+    ºVALORES = SelectNome("areas", "id_area", CStr(ºCRITERIOS))
+    ºID_AREA = ºVALORES(0)
+    '----------------------------------------------------------------------------------------
+    
+    ºCRITERIOS = "(regional='9999' or regional='" & ºID_AREA & "')"
+    ºVALORES = SelectMatriz("bd_curvas_de_obra", "Código, descricao, percentuais, Observacoes", CStr(ºCRITERIOS), "", 4)
+    If ºVALORES(0, 0) <> "VAZIO" Then
+        For ºR = 0 To UBound(ºVALORES)
+            Set ºLi = LV_Curvas.ListItems.Add(, , ºVALORES(ºR, 0))
+            ºLi.SubItems(1) = ºVALORES(ºR, 1)
+            ºLi.SubItems(2) = UBound(Split(ºVALORES(ºR, 2), "/"))
+            ºLi.SubItems(3) = ºVALORES(ºR, 2)
+            If ºVALORES(ºR, 3) <> vbNull Then
+                ºLi.SubItems(4) = ºVALORES(ºR, 3)
+            End If
+        Next
+        LV_Curvas.View = lvwReport
+        LV_Curvas.LabelEdit = lvwManual
+        LV_Curvas.Gridlines = True
+        LV_Curvas.FullRowSelect = True
+    Else
+        MsgBox ("Banco de dados inacessível, as curvas modelo não podem ser carregadas")
+        LV_Curvas.Enabled = False
+        LV_Percentuais.Enabled = False
+        BT_ERASE.Enabled = False
+        BT_OK.Enabled = False
+    End If
+    REFRESH_lv
+    Application.DisplayAlerts = True
+End Sub
+
+Sub Carregar_curvas_estudo()
+     'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column > 1 Then
+        LV_Curvas_Estd.ColumnHeaders.Clear
+        LV_Curvas_Estd.ColumnHeaders.Add , , "ID", 30
+        LV_Curvas_Estd.ColumnHeaders.Add , , "Descrição", 160
+        LV_Curvas_Estd.View = lvwReport
+        LV_Curvas_Estd.FullRowSelect = True
+        LV_Curvas_Estd.ListItems.Clear
+    
+        lv_prcnt_curvas.ColumnHeaders.Clear
+        lv_prcnt_curvas.ColumnHeaders.Add , , "Mês", 28
+        lv_prcnt_curvas.ColumnHeaders.Add , , "Percentual"
+        lv_prcnt_curvas.View = lvwReport
+        lv_prcnt_curvas.FullRowSelect = True
+        lv_prcnt_curvas.ListItems.Clear
+        
+        For ºC = 2 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(2, ºC).Value <> "" Then
+                Set ºLi = LV_Curvas_Estd.ListItems.Add(, , Format(ºC - 1, "0000"))
+                ºLi.SubItems(1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value
+            End If
+        Next
+    End If
+    REFRESH_lv
+End Sub
+Sub CARREGAR_C_PRCT()
+    Dim ºARQUIVO As String
+    LV_Percentuais.ColumnHeaders.Clear
+    LV_Percentuais.ListItems.Clear
+    LV_Percentuais.ColumnHeaders.Add , , "MES", 30
+    LV_Percentuais.ColumnHeaders.Add , , "%", 50
+    
+    If LV_Curvas.SelectedItem <> "" Then
+        Set ºLi = LV_Curvas.SelectedItem
+        ºlIN = 1
+        For Each ºPERCENTUAL In Split(ºLi.SubItems(3), "/")
+            If ºPERCENTUAL <> "" Then
+                Set ºLi = LV_Percentuais.ListItems.Add(, , ºlIN)
+                ºLi.SubItems(1) = Format(CDbl(Replace(ºPERCENTUAL, ".", ",")), "0.00000%")
+                ºlIN = ºlIN + 1
+            End If
+        Next
+    End If
+    LV_Percentuais.View = lvwReport
+    LV_Percentuais.LabelEdit = lvwManual
+    LV_Percentuais.Gridlines = True
+    LV_Percentuais.FullRowSelect = True
+End Sub
+
+Private Sub BT_ERASE_Click()
+    If MsgBox("Confirma Exclusão?", vbYesNo) = vbYes Then
+        ºCURVA = CDbl(LV_Curvas_Estd.SelectedItem)
+        For ºFASE = 1 To 20
+            If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 209 + ºFASE).Value = ºCURVA Then
+                ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 209 + ºFASE).Value = ""
+                ThisWorkbook.Sheets("BD_CAD_VND").Range("K" & 209 + ºFASE).Value = ""
+                ThisWorkbook.Sheets("BD_CAD_VND").Range("L" & 209 + ºFASE).Value = ""
+            ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 209 + ºFASE).Value > ºCURVA Then
+                ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 209 + ºFASE).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 209 + ºFASE).Value - 1
+            End If
+        Next
+        ThisWorkbook.Sheets("BD_CAD_VND").Range(Cells(260, ºCURVA + 1).Address & ":" & Cells(461, ºCURVA + 1).Address).ClearContents
+        Colunas = ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column
+        If Colunas > ºCURVA + 1 Then
+            ºC = Colunas - ºCURVA - 1
+            ThisWorkbook.Sheets("BD_CAD_VND").Range(Cells(260, ºCURVA + 1).Address & ":" & Cells(461, ºCURVA + ºC).Address).Value = _
+            ThisWorkbook.Sheets("BD_CAD_VND").Range(Cells(260, ºCURVA + 2).Address & ":" & Cells(461, Colunas).Address).Value
+            ThisWorkbook.Sheets("BD_CAD_VND").Range(Cells(260, Colunas).Address & ":" & Cells(461, Colunas).Address).Value = ""
+        End If
+        CadastroUnidades.LV_CurvasObra.ColumnHeaders.Clear
+        CadastroUnidades.LV_CurvasObra.ListItems.Clear
+        Call CarregarCurvasOB
+        Call CarregarFases
+        'Call CadastroUnidades.LV_FasesObra_Click
+        Carregar_curvas_estudo
+    End If
+End Sub
+Private Sub BT_NEW_Click()
+    ºNome = InputBox("Informe o Nome da nova Curva", "")
+    If MsgBox("Deseja ler as informações na area de tranferência?", vbYesNo) = vbYes And ºNome <> "" Then
+        Dim DT As New MSForms.DataObject
+        DT.GetFromClipboard
+        ºVALORES = Split(DT.GetText, Chr(10))
+        If UBound(ºVALORES) > 1 Then
+            'Validar Curva
+            For Each ºVlr In ºVALORES
+                If ºVlr <> "" Then
+                    ºTotal = ºTotal + FormatarNum_dbl(CStr(ºVlr))
+                End If
+            Next
+            If Round(ºTotal, 0) <> 1 Then
+                MsgBox "A curva selecionada não totaliza 100%"
+            Else
+                ºC = ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column + 1
+                ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value = ºNome
+                ºL = 1
+                For Each ºVlr In ºVALORES
+                    If ºVlr <> "" Then
+                        ThisWorkbook.Sheets("BD_CAD_VND").Cells(261 + ºL, ºC).NumberFormat = "0.00000%"
+                        ThisWorkbook.Sheets("BD_CAD_VND").Cells(261 + ºL, ºC).Value = FormatarNum_dbl(CStr(ºVlr))
+                        ºL = ºL + 1
+                    End If
+                Next
+            End If
+        Else
+            MsgBox "copie uma curva válida"
+        End If
+    ElseIf ºNome <> "" Then
+        With Application.FileDialog(msoFileDialogOpen)
+            .Filters.Clear
+            .Filters.Add "Arquivo do Excel", "*.xls*"
+            .Show
+            If .SelectedItems.Count > 0 Then ºARQUIVO_FONTE = .SelectedItems(1)
+        End With
+        If ºARQUIVO_FONTE <> "" Then
+            Workbooks.Open ºARQUIVO_FONTE, False, True
+            If Workbooks(Dir(ºARQUIVO_FONTE)).Sheets(1).Cells(Rows.Count, 1).End(xlUp).Row > 1 Then
+                For ºL = 1 To Workbooks(Dir(ºARQUIVO_FONTE)).Sheets(1).Cells(Rows.Count, 1).End(xlUp).Row
+                    If ºVlr <> "" Then
+                        ºTotal = ºTotal + FormatarNum_dbl(CStr(Workbooks(Dir(ºARQUIVO_FONTE)).Sheets(1).Cells(ºL, 1).Value))
+                    End If
+                Next
+                If Round(ºTotal, 0) <> 1 Then
+                    MsgBox "A curva selecionada não totaliza 100%"
+                Else
+                    ºC = ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column + 1
+                    ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value = ºNome
+                    ºL = 1
+                    For ºL = 1 To Workbooks(Dir(ºARQUIVO_FONTE)).Sheets(1).Cells(Rows.Count, 1).End(xlUp).Row
+                        ThisWorkbook.Sheets("BD_CAD_VND").Cells(261 + ºL, ºC).NumberFormat = "0.00000%"
+                        ThisWorkbook.Sheets("BD_CAD_VND").Cells(261 + ºL, ºC).Value = Workbooks(Dir(ºARQUIVO_FONTE)).Sheets(1).Cells(ºL, 1).Value
+                        ºL = ºL + 1
+                    Next
+                End If
+            End If
+            Workbooks(Dir(ºARQUIVO_FONTE)).Close , False
+            Workbooks(ºARQUIVO).Close True
+        End If
+        Carregar_curvas_estudo
+    End If
+End Sub
+
+Private Sub BT_OK_Click()
+    'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    
+    If MultiPage1.Value = 1 Then
+        Application.ScreenUpdating = False
+        Application.DisplayAlerts = False
+        Dim ºARQUIVO As String
+        ºC = ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column + 1
+        ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value = CURVA.Caption
+        ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, ºC).Value = 0
+        For Each ºLi In LV_Percentuais.ListItems
+            ºL = ºL + 1
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(261 + ºL, ºC).NumberFormat = "0.00000%"
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(261 + ºL, ºC).Value = CDbl(Replace(ºLi.SubItems(1), "%", "")) / 100
+        Next
+        CadastroUnidades.LV_CurvasObra.ColumnHeaders.Clear
+        CadastroUnidades.LV_CurvasObra.ListItems.Clear
+        Call CarregarCurvasOB
+        Unload Me
+        Application.DisplayAlerts = True
+    Else
+        ºCURVA = CDbl(LV_Curvas_Estd.SelectedItem) & " | " & LV_Curvas_Estd.SelectedItem.SubItems(1)
+        CadastroUnidades.CB_Curva.Value = ºCURVA
+        
+        ºCURVA = CDbl(LV_Curvas_Estd.SelectedItem)
+        CadastroUnidades.TB_INI_OBRA.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + CadastroUnidades.CB_Fase, 11).Value
+        CadastroUnidades.TB_DURACAO.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, 1 + ºCURVA).End(xlUp).Row - 261
+        Call SalvarFase
+        Unload Me
+    End If
+End Sub
+Private Sub LV_Curvas_Estd_ItemClick(ByVal Item As MSComctlLib.ListItem)
+    For Each ºLi In LV_Curvas_Estd.ListItems
+        ºLi.Bold = False
+    Next
+    LV_Curvas_Estd.SelectedItem.Bold = True
+
+    
+    lv_prcnt_curvas.ListItems.Clear
+    LPCurvas = ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, CDbl(Item) + 1).End(xlUp).Row
+    
+    For ºL = 262 To LPCurvas
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, CDbl(Item) + 1).Value <> "" Then
+            Set ºLi = lv_prcnt_curvas.ListItems.Add(, , ºL - 261)
+            ºLi.SubItems(1) = Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, CDbl(Item) + 1).Value, "0.00000%")
+        End If
+    Next
+End Sub
+
+Private Sub LV_Curvas_ItemClick(ByVal Item As MSComctlLib.ListItem)
+    For Each ºLi In LV_Curvas.ListItems
+        ºLi.Bold = False
+    Next
+    LV_Curvas.SelectedItem.Bold = True
+    OBSERVACAO.Value = Item.SubItems(4)
+    selecionada.Caption = Item & " " & Item.SubItems(1)
+    Item.Selected = True
+    CARREGAR_C_PRCT
+End Sub
+
+
+

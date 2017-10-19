@@ -1,0 +1,102 @@
+VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} ATT_DATAS 
+   Caption         =   "Atualizar Datas"
+   ClientHeight    =   2370
+   ClientLeft      =   45
+   ClientTop       =   375
+   ClientWidth     =   9225
+   OleObjectBlob   =   "ATT_DATAS.frx":0000
+   StartUpPosition =   1  'CenterOwner
+End
+Attribute VB_Name = "ATT_DATAS"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+
+Private Sub OK_Click()
+    If Me.OptionButton2.Value Then
+        ºDataD = DateDiff("m", ºDATA_BASE(""), CadastroUnidades.DT_Base.Value)
+        Dim ºL, ºN, ºG, ºLinhas As Double
+        Dim ºC_TBL, ºCOLBD, ºR, ºLINHASFLUXO As Integer
+        'LANÇAMENTOS
+        For ºL = 2 To ThisWorkbook.Sheets("Lançamentos").Cells(Rows.Count, 2).End(xlUp).Row
+            If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 8).Value = "" Then
+                ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 7).Value = ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 7).Value - ºDataD
+            End If
+        Next
+        'PARCELAMENTO
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(157, 2).End(xlUp).Row > 107 Then
+            For ºL = 108 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(157, 2).End(xlUp).Row
+                For ºC_TBL = 3 To 172 Step 9
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 6).Value = 1 Then
+                        If EVENTO_CHK(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 2).Value) = False Then
+                            ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 2).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 2).Value - ºDataD
+                        End If
+                    End If
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 7).Value = 1 Then
+                        If EVENTO_CHK(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 8).Value) = False Then
+                            ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 8).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 8).Value - ºDataD
+                        End If
+                    End If
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 4).Value = 1 Then
+                        If EVENTO_CHK(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 5).Value) = False Then
+                            ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 5).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC_TBL + 5).Value - ºDataD
+                        End If
+                    End If
+                Next
+            Next
+        End If
+        'CURVA DE VENDA
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(106, 2).End(xlUp).Row > 56 Then
+            For ºL = 57 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(106, 2).End(xlUp).Row
+                For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, Columns.Count).End(xlToLeft).Column Step 3
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºCOLBD).Value <> "" Then
+                        If EVENTO_CHK(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºCOLBD + 2).Value) = False Then
+                            ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºCOLBD + 2).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºCOLBD + 2).Value - ºDataD
+                        End If
+                    End If
+                Next
+            Next
+        End If
+        'OBRA
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, 2).End(xlUp).Row > 209 Then
+            For ºL = 210 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, 2).End(xlUp).Row
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value <> "" Then
+                    If EVENTO_CHK(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value) = False Then
+                        ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, 11).Value - ºDataD
+                    End If
+                End If
+            Next
+        End If
+        'IMPOSTOS
+        ºR = Application.Match("ºT_Pagamento", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value <> "" Then
+            If EVENTO_CHK(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value) = False Then
+                ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value - ºDataD
+            End If
+        End If
+        
+        ºR = Application.Match("ºT_Pagamento_ITBI", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value <> "" Then
+            If EVENTO_CHK(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value) = False Then
+                ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value - ºDataD
+            End If
+        End If
+    End If
+    Unload Me
+End Sub
+Function EVENTO_CHK(ºEVENTO_V As Variant) As Boolean
+    If Application.IfError(Application.Search("LCTO", ºEVENTO_V), 0) <> 0 Then
+        EVENTO_CHK = True
+    ElseIf Application.IfError(Application.Search("INIVND", ºEVENTO_V), 0) <> 0 Then
+        EVENTO_CHK = True
+    ElseIf Application.IfError(Application.Search("FIMOBR", ºEVENTO_V), 0) <> 0 Then
+        EVENTO_CHK = True
+    ElseIf Application.IfError(Application.Search("INIOBR", ºEVENTO_V), 0) <> 0 Then
+        EVENTO_CHK = True
+    Else
+        EVENTO_CHK = False
+    End If
+End Function
+

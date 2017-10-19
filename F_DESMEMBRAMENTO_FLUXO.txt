@@ -1,0 +1,956 @@
+Attribute VB_Name = "F_DESMEMBRAMENTO_FLUXO"
+Option Explicit
+   
+Sub COMISSÃODIRETA(ºLASTCOL, ºLINHASFLUXO, ºPERF As Double)
+    'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+     
+     Dim ºC, ºI, ºColunas_Tabela, ºL As Integer
+     Dim ºTX_COM_DIR, ºTX_COM_DIR_2 As Double
+     Dim ºFORMULA_1, ºFORMULA_2, ºFORMULA_3, ºFormula As String
+     ºC = Application.Match("Comissão Direta", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+     If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text = "" Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Value = 0
+     ºTX_COM_DIR = Replace((CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100), ",", ".") '* (1 + ºPRMT_FIS)
+     ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL).Value = "COMISSÃO DIRETA"
+     Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL))
+     ºFORMULA_1 = "("
+     ºFORMULA_2 = "("
+     For ºI = 0 To ((ºLASTCOL - 5) / 4) - 1
+         ºFORMULA_1 = ºFORMULA_1 & "+SUM(R6C" & 6 + (4 * ºI) & ":RC" & 6 + (4 * ºI) & ")"
+         ºFORMULA_2 = ºFORMULA_2 & "+SUM(RC" & 7 + (4 * ºI) & ":RC" & 8 + (4 * ºI) & ")"
+     Next
+     ºFORMULA_3 = "SUM(R6C:R[-1]C)"
+     If ThisWorkbook.Sheets("BD_CAD_VND").Range("C490").Value = "Venda da Unidade" Or Not ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value Then
+         ºFormula = "=IF((" & ºFORMULA_1 & ")*" & ºTX_COM_DIR & ")+" & ºFORMULA_3 & ">" & ºFORMULA_2 & ")," & ºFORMULA_2 & ")*-1,((" & ºFORMULA_1 & ")*" & ºTX_COM_DIR & ")+" & ºFORMULA_3 & ")*-1)"
+     Else
+         ºColunas_Tabela = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+         ºFormula = "=IF((" & ºFORMULA_1 & "+IFERROR(SUM(INDIRECT(""BD_TBL_DEFLA_CMM!$B""&MATCH(R6C2,BD_TBL_DEFLA_CMM!C1,0)&"":""&address(MATCH(RC2,BD_TBL_DEFLA_CMM!C1,0)," & ºColunas_Tabela & "))),0))*" & ºTX_COM_DIR & ")+" & ºFORMULA_3 & ">" & ºFORMULA_2 & ")," & ºFORMULA_2 & ")*-1,((" & ºFORMULA_1 & "+IFERROR(SUM(INDIRECT(""BD_TBL_DEFLA_CMM!$B""&MATCH(R6C2,BD_TBL_DEFLA_CMM!C1,0)&"":""&address(MATCH(RC2,BD_TBL_DEFLA_CMM!C1,0)," & ºColunas_Tabela & "))),0))*" & ºTX_COM_DIR & ")+" & ºFORMULA_3 & ")*-1)"
+     End If
+     For ºL = 7 To ºLINHASFLUXO
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºLASTCOL).FormulaR1C1 = ºFormula
+     Next
+End Sub
+Function CONTABILIZARVENDAS()
+    'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Function
+    
+    Dim ºLinTPLG, ºLinTPLGVG, ºLinPerfis, ºLINHASFLUXO, ºTaxaMes, TaxaMes As Double
+    Dim ºL, ºU, ºFASE, ºL_FLX, ºTPLG, ºC As Integer
+    ºLinTPLG = ThisWorkbook.Sheets("BD_CAD_VND").Cells(33, 3).End(xlUp).Row
+    ºLinTPLGVG = ThisWorkbook.Sheets("BD_CAD_VND").Cells(55, 3).End(xlUp).Row
+    ºLinPerfis = ThisWorkbook.Sheets("BD_CAD_VND").Cells(208, 3).End(xlUp).Row
+    ºLINHASFLUXO = ºMaiorINDICE
+
+    
+    ºL = ThisWorkbook.Sheets("BD_TBL_VND").Cells(Rows.Count, 1).End(xlUp).Row
+    ºU = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+    For ºFASE = 1 To 20
+        Call Cont_Area_PVT(CInt(ºFASE))
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºFASE + 497).Value <> "" Then
+            'Unidades
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 5 + ((ºFASE - 1) * 4)).Value = "UNIDADES F" & ºFASE
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 5 + ((ºFASE - 1) * 4)))
+            
+            'VGV UNIDADES
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 6 + ((ºFASE - 1) * 4)).Value = "VGV UNIDADES F" & ºFASE
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 6 + ((ºFASE - 1) * 4)))
+            
+            'RECEITA COM VENDAS
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 7 + ((ºFASE - 1) * 4)).Value = "RECEITA COM VENDAS F" & ºFASE
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 7 + ((ºFASE - 1) * 4)))
+            
+            'RECEITA DE JUROS
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 8 + ((ºFASE - 1) * 4)).Value = "RECEITA DE JUROS F" & ºFASE
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 8 + ((ºFASE - 1) * 4)))
+            
+            For ºL_FLX = 6 To ºLINHASFLUXO
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 5 + ((ºFASE - 1) * 4)).Value = 0
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 6 + ((ºFASE - 1) * 4)).Value = 0
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 7 + ((ºFASE - 1) * 4)).Value = 0
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 8 + ((ºFASE - 1) * 4)).Value = 0
+            Next
+            Dim ºPerfilTP, ºTblVnd, ºTblVel, ºInicioVnd, ºCOLB, ºCOLBD, ºPeriodos, ºINICIO, ºLASTCOL As Integer
+            Dim ºUNIDADES, ºPERMUTAS, ºAREA_PVT_COB, ºAREA_PVT_DESCOB, ºFATOR_DESCOB, ºVLR_M_COB, ºVGV_TOTAL, ºVgv, ºPercent, ºL_R_J As Double
+            
+            For ºTPLG = 3 To ºLinTPLG
+                'FASE
+                ºC = Application.Match("Fase", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value = ºFASE Then
+                    'PERFIL
+                    ºC = Application.Match("Perfil Venda", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+                    ºPerfilTP = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("A901:A950"), 0), 0)
+                    'TABELA DE VENDAS
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value <> "" Then
+                        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value) - 2)
+                    ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value <> "" Then
+                        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value) - 2)
+                    Else
+                        Exit Function
+                    End If
+                    
+                    'VELOCIDADE DE VENDAS
+                    ºTblVel = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 3).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B57:B105"), 0), 0)
+                    
+                    'INICIO DAS VENDAS
+                    ºInicioVnd = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, 5).Value
+                    
+                    'UNIDADES
+                    ºC = Application.Match("Unidades", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+                    ºUNIDADES = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    'UNIDADES PERMUTADAS
+                    ºC = Application.Match("Permutas", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+                    ºPERMUTAS = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    'AREA PRIVATIVA COBERTA
+                    ºC = Application.Match("Area Privativa Coberta", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+                    ºAREA_PVT_COB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    'AREA PRIVATIVA DESCOBERTA
+                    ºC = Application.Match("Area Privativa Descoberta", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+                    ºAREA_PVT_DESCOB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    'FATOR
+                    ºC = Application.Match("Fator", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+                    ºFATOR_DESCOB = (Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value, "%", "") + 1 - 1) / 100
+                    
+                    'PREÇO DO M² COBERTO
+                    ºC = Application.Match("Preço do m² Privativo Coberto", ThisWorkbook.Sheets("BD_CAD_VND").Rows(2), 0)
+                    ºVLR_M_COB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    'VGV DA TIPOLOGIA
+                    If ºAREA_PVT_DESCOB > 0 And ºFATOR_DESCOB > 0 Then
+                        ºVGV_TOTAL = ºVGV_TOTAL + ((ºUNIDADES - ºPERMUTAS) * ºAREA_PVT_COB * ºVLR_M_COB) + ((ºUNIDADES - ºPERMUTAS) * ºAREA_PVT_DESCOB * ºVLR_M_COB * ºFATOR_DESCOB)
+                        ºVgv = (ºAREA_PVT_COB * ºVLR_M_COB) + (ºAREA_PVT_DESCOB * ºVLR_M_COB * ºFATOR_DESCOB)
+                    Else
+                        ºVGV_TOTAL = ºVGV_TOTAL + ((ºUNIDADES - ºPERMUTAS) * ºAREA_PVT_COB * ºVLR_M_COB)
+                        ºVgv = (ºAREA_PVT_COB * ºVLR_M_COB)
+                    End If
+                    For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column Step 3
+                        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+                            If Len(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Text, "%", "")) Then
+                                ºPercent = Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Text, "%", "") / 100
+                            Else
+                                ºPercent = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value
+                            End If
+                            ºPeriodos = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 1).Value)
+                            ºINICIO = CDbl(DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0))
+                            For ºL_FLX = 6 To ºLINHASFLUXO
+                                If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 2).Value >= ºINICIO And ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 2).Value < ºINICIO + ºPeriodos Then
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 5 + ((ºFASE - 1) * 4)).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 5 + ((ºFASE - 1) * 4)).Value + ((ºUNIDADES - ºPERMUTAS) * (ºPercent / ºPeriodos))
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 6 + ((ºFASE - 1) * 4)).FormulaR1C1 = "=SUMIFS(BD_TBL_REC!R1048576C2:R1048576C16384,BD_TBL_VND!R3C2:R3C16384,RIGHT(R5C,LEN(R5C)-SEARCH(""F"",R5C)),BD_TBL_REC!R2C2:R2C16384,'Fluxo Operacional'!RC2)"
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 7 + ((ºFASE - 1) * 4)).FormulaR1C1 = "=IFERROR(SUMIF(BD_TBL_VND!R3C2:R3C16384,RIGHT(R5C,LEN(R5C)-SEARCH(""F"",R5C)),INDIRECT(""BD_TBL_REC!$B""&MATCH(RC2,BD_TBL_REC!C1,0)&"":$XFD"" & MATCH(RC2,BD_TBL_REC!C1,0))),0)"
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 8 + ((ºFASE - 1) * 4)).FormulaR1C1 = "=IFERROR(SUMIF(BD_TBL_VND!R3C2:R3C16384,RIGHT(R5C,LEN(R5C)-SEARCH(""F"",R5C)),INDIRECT(""BD_TBL_REC_JUR!$B""&MATCH(RC2,BD_TBL_REC_JUR!C1,0)&"":$XFD"" & MATCH(RC2,BD_TBL_REC_JUR!C1,0))),0)"
+                                End If
+                                If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 2).Value >= ºINICIO Then
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 7 + ((ºFASE - 1) * 4)).FormulaR1C1 = "=IFERROR(SUMIF(BD_TBL_VND!R3C2:R3C16384,RIGHT(R5C,LEN(R5C)-SEARCH(""F"",R5C)),INDIRECT(""BD_TBL_REC!$B""&MATCH(RC2,BD_TBL_REC!C1,0)&"":$XFD"" & MATCH(RC2,BD_TBL_REC!C1,0))),0)"
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 8 + ((ºFASE - 1) * 4)).FormulaR1C1 = "=IFERROR(SUMIF(BD_TBL_VND!R3C2:R3C16384,RIGHT(R5C,LEN(R5C)-SEARCH(""F"",R5C)),INDIRECT(""BD_TBL_REC_JUR!$B""&MATCH(RC2,BD_TBL_REC_JUR!C1,0)&"":$XFD"" & MATCH(RC2,BD_TBL_REC_JUR!C1,0))),0)"
+                                    ºLASTCOL = 8 + ((ºFASE - 1) * 4) + 1
+                                End If
+                            Next
+                        End If
+                    Next
+                End If
+            Next
+            For ºTPLG = 35 To ºLinTPLGVG
+                'FASE
+                ºC = Application.Match("Fase", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value = ºFASE Then
+                    'PERFIL
+                    ºC = Application.Match("Perfil Venda", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+                    ºPerfilTP = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("A901:A950"), 0), 0)
+                    'TABELA DE VENDAS
+                    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value <> "" Then
+                        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 4).Value) - 2)
+                    ElseIf ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value <> "" Then
+                        ºTblVnd = Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value, Application.Search("|", ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 5).Value) - 2)
+                    Else
+                        Exit Function
+                    End If
+                    
+                    'VELOCIDADE DE VENDAS
+                    ºTblVel = Application.IfError(Application.Match(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPerfilTP + 900, 3).Value, ThisWorkbook.Sheets("BD_CAD_VND").Range("B57:B105"), 0), 0)
+                    
+                    'INICIO DAS VENDAS
+                    ºInicioVnd = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, 5).Value, 0)
+                    
+                    'UNIDADES
+                    ºC = Application.Match("Unidades", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+                    ºUNIDADES = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    'UNIDADES PERMUTADAS
+                    ºC = Application.Match("Permutas", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+                    ºPERMUTAS = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    'AREA PRIVATIVA
+                    ºC = Application.Match("Area Privativa", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+                    ºAREA_PVT_COB = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    'VALOR M²
+                    ºC = Application.Match("Preço do M²", ThisWorkbook.Sheets("BD_CAD_VND").Rows(34), 0)
+                    ºVgv = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTPLG, ºC).Value
+                    
+                    For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column Step 3
+                        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+                            If Len(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Text, "%", "")) Then
+                                ºPercent = Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Text, "%", "") / 100
+                            Else
+                                ºPercent = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value
+                            End If
+                            ºPeriodos = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 1).Value
+                            ºINICIO = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0)
+                            For ºL_FLX = 6 To 75
+                                If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 2).Value >= ºINICIO And ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 2).Value < ºINICIO + ºPeriodos Then
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 6 + ((ºFASE - 1) * 4)).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_FLX, 6 + ((ºFASE - 1) * 4)).Value + ((ºPercent / ºPeriodos) * ºVgv)
+                                End If
+                            Next
+                        End If
+                    Next
+                    Dim ºL_R_J_total, ºColunas_R_J, ºL_INI As Double
+                    For ºL_R_J = 4 To ºL_R_J_total
+                        For ºC = 2 To ºColunas_R_J
+                            If ThisWorkbook.Sheets("BD_TBL_REC").Cells(1, ºC).Value = ºTPLG - 2 Then
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_INI + (ºL_R_J - 4), 7 + ((ºFASE - 1) * 4)).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_INI + (ºL_R_J - 4), 7 + ((ºFASE - 1) * 4)).Value + ThisWorkbook.Sheets("BD_TBL_REC").Cells(ºL_R_J, ºC).Value
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_INI + (ºL_R_J - 4), 8 + ((ºFASE - 1) * 4)).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL_INI + (ºL_R_J - 4), 8 + ((ºFASE - 1) * 4)).Value + ThisWorkbook.Sheets("BD_TBL_REC_JUR").Cells(ºL_R_J, ºC).Value
+                                ºLASTCOL = 8 + ((ºFASE - 1) * 4) + 1
+                            End If
+                        Next
+                    Next
+                End If
+            Next
+        End If
+    Next
+    CONTABILIZARVENDAS = ºLASTCOL
+End Function
+
+Sub LCTO_INCORPORAÇÃO(ºC_TOT_ANT, ºLINHASFLUXO, ºPERF, ºLASTCOL, ºVGV_TOTAL)
+'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Sub
+    
+    Dim ºColunaLançamento, ºLL As Integer
+    Dim ºFormula As String
+        
+        'LANÇAMENTOS
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC_TOT_ANT).Value = "DESP. DE INCORPORAÇÃO R$ FASE 1"
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºC_TOT_ANT).Address).FormulaR1C1 = "=0"
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        ºColunaLançamento = Lançamentos_Manuais("3.4 INCORPORAÇÃO", ºC_TOT_ANT, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+        ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+        
+        'TOTAL
+        '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 3.4"
+        ºFormula = "=SUM(RC" & ºC_TOT_ANT & ":" & "RC" & ºColunaLançamento - 1 & ")"
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+        Next
+        
+        Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+        ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºC_TOT_ANT).Address & ":" & Cells(2, ºColunaLançamento).Address))
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºC_TOT_ANT).Value = "PEP 3.4 INCORPORAÇÃO"
+        Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+        Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºC_TOT_ANT).Address & ":" & Cells(5, ºColunaLançamento).Address))
+End Sub
+
+
+
+
+Function CONTABIMPOSTOS(ºC_TOT_ANT, ºLINHASFLUXO, ºPERF, ºLASTCOL, ºVGV_TOTAL)
+'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Function
+
+    Dim ºC, ºLL, ºColunaLançamento, ºI, ºColunas_Tabela, ºL, ºR, ºMES As Integer
+    Dim ºREGIME, ºFormula As String
+    Dim ºPRMT_FIS, ºTX_PRM, TX_RET, TX_PIS, TX_IR As Double
+    ºC = Application.Match("Regime de Tributação", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+    ºREGIME = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Value
+ 
+    Dim ºTX_PRMT, ºFORMULA_1 As Variant
+    Dim ºFORMULA_2 As Variant
+    
+    'FUNDO DE PERMUTA
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+     If ºREGIME = "RET" Then
+         ºC = Application.Match("Aliquota RET", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+         ºTX_PRM = (CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100) * (1 + ºPRMT_FIS)
+         TX_RET = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100 * -1
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 2).Value = "RET"
+         Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 2))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 2))
+         Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºLASTCOL + 2))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºLASTCOL + 2))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(ºLINHASFLUXO, ºLASTCOL + 2).Address))
+         ºR = Application.Match("ºT_Permuta Financeira", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+         If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value <> "" And ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & ºR).Value = 2 Then
+             ºFORMULA_1 = "-(R[-1]C" & ºLASTCOL + 1 & "*BD_CAD_VND!R" & ºR & "C3))*"
+         Else
+             ºFORMULA_1 = ")*"
+         End If
+         For ºL = 6 To ºLINHASFLUXO - 1
+             ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL + 1, ºLASTCOL + 2).FormulaR1C1 = _
+             "=(R[-1]C" & ºLASTCOL + 1 & ºFORMULA_1 & Replace(TX_RET, ",", ".")
+         Next
+         
+         'TOTAL
+         '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+     
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 3).Value = "TOTAL IMPOSTOS "
+         ºFormula = "=SUM(RC" & ºLASTCOL + 2 & ")"
+         For ºLL = 6 To ºLINHASFLUXO - 1 Step 1
+             ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºLASTCOL + 3).FormulaR1C1 = ºFormula
+         Next
+     
+         Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºLASTCOL + 3).Address & ":" & Cells(ºLINHASFLUXO, ºLASTCOL + 3).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(ºLINHASFLUXO, ºLASTCOL + 3).Address))
+     
+         ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 3).Address).Merge
+         ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 3).Address).HorizontalAlignment = xlCenter
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºLASTCOL + 2).Value = "IMPOSTOS"
+         Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 3).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 3).Address))
+         Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL + 2).Address & ":" & Cells(5, ºLASTCOL + 3).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL + 2).Address & ":" & Cells(5, ºLASTCOL + 3).Address))
+         CONTABIMPOSTOS = ºLASTCOL + 4
+         CONTABIMPOSTOS = ºLASTCOL + 4
+    Else
+         ºC = Application.Match("Aliquota PIS/COFINS", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+         If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text = "" Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Value = 0
+         TX_PIS = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100 * -1
+         ºC = Application.Match("Aliquota IR/CSLL", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+         If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text = "" Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Value = 0
+         TX_IR = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100 * -1
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 2).Value = "PIS/COFINS"
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 3).Value = "IR/CSLL"
+         Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL + 2).Address & ":" & Cells(5, ºLASTCOL + 3).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL + 2).Address & ":" & Cells(5, ºLASTCOL + 3).Address))
+         
+         If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 464).Value <> "" And ThisWorkbook.Sheets("BD_CAD_VND").Range("D464").Value = 2 Then
+             ºFORMULA_1 = "-(R[-1]C" & ºLASTCOL + 1 & "*BD_CAD_VND!R464C3))*"
+         Else
+             ºFORMULA_1 = ")*"
+         End If
+         If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & 464).Value <> "" And ThisWorkbook.Sheets("BD_CAD_VND").Range("D464").Value = 2 Then
+             ºFORMULA_2 = "-(sum(R[-3]C" & ºLASTCOL + 1 & ":R[-1]C" & ºLASTCOL + 1 & ")*BD_CAD_VND!R464C3))*"
+         Else
+             ºFORMULA_2 = ")*"
+         End If
+         For ºL = 6 To ºLINHASFLUXO - 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL + 1, ºLASTCOL + 2).Value = "=(R[-1]C" & ºLASTCOL + 1 & ºFORMULA_1 & Replace(TX_PIS, ",", ".")
+            ºMES = Month(ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL + 1, 3).Value)
+            If (ºMES = 1 Or ºMES = 4 Or ºMES = 7 Or ºMES = 10) And ºL > 6 Then
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL + 1, ºLASTCOL + 3).Value = "=(sum(R[-3]C" & ºLASTCOL + 1 & ":R[-1]C" & ºLASTCOL + 1 & ")" & ºFORMULA_2 & Replace(TX_IR, ",", ".")
+            Else
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL + 1, ºLASTCOL + 3).Value = 0
+            End If
+         Next
+         ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 4).Address).Merge
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºLASTCOL + 2).Value = "IMPOSTOS"
+         Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 4).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 4).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(ºLINHASFLUXO, ºLASTCOL + 4).Address))
+         
+         'TOTAL
+         '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+         
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºLASTCOL + 4).Value = "TOTAL IMPOSTOS "
+         ºFormula = "=SUM(RC" & ºLASTCOL + 2 & ":RC" & ºLASTCOL + 3 & ")"
+         For ºLL = 6 To ºLINHASFLUXO - 1 Step 1
+             ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºLASTCOL + 4).FormulaR1C1 = ºFormula
+         Next
+     
+         Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºLASTCOL + 4).Address & ":" & Cells(ºLINHASFLUXO, ºLASTCOL + 4).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(ºLINHASFLUXO, ºLASTCOL + 4).Address))
+     
+         ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 4).Address).Merge
+         ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 4).Address).HorizontalAlignment = xlCenter
+         ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºLASTCOL + 2).Value = "IMPOSTOS"
+         Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 4).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL + 2).Address & ":" & Cells(2, ºLASTCOL + 4).Address))
+         Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL + 2).Address & ":" & Cells(5, ºLASTCOL + 4).Address))
+         Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL + 2).Address & ":" & Cells(5, ºLASTCOL + 4).Address))
+         CONTABIMPOSTOS = ºLASTCOL + 5
+         CONTABIMPOSTOS = ºLASTCOL + 5
+     End If
+End Function
+Sub SENSIBILIDADE()
+'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Sub
+    
+    Dim ºVAR_PVT, ºVAR_CUSTO, ºValorCusto, ºFator_C, ºFator_P As Double
+    Dim ºC, ºP As Integer
+    DoEvents
+    Calculate
+    On Error GoTo fim
+    ºVAR_PVT = ºVAR_1("")
+    ºVAR_CUSTO = ºVAR_2("")
+    ºValorCusto = ThisWorkbook.Sheets("Capa Viabilidade").Range("E13").Value
+    If ºValorCusto <> 0 Then
+        For ºC = -3 To 3
+            If ºFTR_2("") = "R$" Then
+                ºFator_C = (ºVAR_CUSTO * ThisWorkbook.Sheets("Capa Viabilidade").Range("B10").Value) / ºValorCusto
+            Else
+                ºFator_C = ºVAR_CUSTO / 100
+            End If
+            ThisWorkbook.Sheets("BD_CAD_VND").Range("Q1").Value = 1 + (ºFator_C * (ºC * -1))
+            For ºP = -4 To 4
+                If ºFTR_1("") = "R$" Then
+                    ºFator_P = ºVAR_PVT / ThisWorkbook.Sheets("Capa Viabilidade").Range("I7").Value
+                Else
+                    ºFator_P = ºVAR_PVT / 100
+                End If
+                ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value = 1 + (ºFator_P * (ºP * -1))
+                DoEvents
+                Calculate
+                ThisWorkbook.Sheets("Capa Viabilidade").Cells(42, 14 + (ºC * 3)).Value = Format((ºFator_C * (ºC * -1)), "0.0%") & " | " & Format(ThisWorkbook.Sheets("Capa Viabilidade").Range("I13").Value, "#,##0")
+                ThisWorkbook.Sheets("Capa Viabilidade").Cells(48 + ºP, 3).Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("I7").Value * (1 + (ºFator_P * (ºP * -1)))
+                ThisWorkbook.Sheets("Capa Viabilidade").Cells(48 + ºP, 2).Value = (ºFator_P * (ºP * -1))
+                ThisWorkbook.Sheets("Capa Viabilidade").Cells(48 + ºP, 14 + (ºC * 3)).Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("AG36").Value
+            Next
+        Next
+    End If
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("Q1").Value = 1
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value = 1
+    DoEvents
+    Calculate
+    Call PermutaEquivalente
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("Q1").Value = 1
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value = 1
+    DoEvents
+    Calculate
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AG36").GoalSeek goal:=0, changingcell:=Sheets("BD_CAD_VND").Range("O1")
+    ThisWorkbook.Sheets("Capa Viabilidade").Range("AG38").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("I7").Value * ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value
+    If ThisWorkbook.Sheets("Capa Viabilidade").Range("AG38").Value > 0 Then
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AG36").GoalSeek goal:=0.165, changingcell:=Sheets("BD_CAD_VND").Range("O1")
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AG39").Value = ThisWorkbook.Sheets("Capa Viabilidade").Range("I7").Value * ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value
+    Else
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AG38").Value = 0
+        ThisWorkbook.Sheets("Capa Viabilidade").Range("AG39").Value = 0
+    End If
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("Q1").Value = 1
+    ThisWorkbook.Sheets("BD_CAD_VND").Range("O1").Value = 1
+    DoEvents
+    Calculate
+fim:
+End Sub
+Function Lançamentos_Manuais(ºPEP As String, ºColunaLançamento, ºLINHASFLUXO As Double, ºPERF, ºLASTCOL, ºVGV_TOTAL As Variant)
+ 'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Function
+
+    Dim ºCLÇTO, ºLCTO, ºL, ºcol, ºINICIO, ºInicioVnd, ºCOLBD, ºFASEO, ºCURVA, ºM_INI_OBRA, ºM_FIM_OBRA, ºcolunas, ºP, ºPeriodicidade, ºI, ºLL, ºR, ºC, ºFSE_, ºColunas_Tabela, ºPARCELAS As Integer
+    Dim ºAREA, ºAssunto, ºEVENTO_V, ºTipo, ºFormula As String
+    Dim ºPERFILV, ºMESES_D, ºTblVel, ºvalor, ºParcentualC, ºPRMT_FIS, ºTX_PRM, ºTX, ºLi As Double
+    Dim ºCustoRasoFase As Variant
+    ºCLÇTO = ºColunaLançamento
+    'LANÇAMENTOS
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    ºLCTO = ThisWorkbook.Sheets("LANÇAMENTOS").Cells(Rows.Count, 2).End(xlUp).Row
+    For ºL = 2 To ºLCTO
+        ºAREA = ThisWorkbook.Sheets("LANÇAMENTOS").Range("C" & ºL).Value
+        If ºAREA = ºPEP Then
+            ºCLÇTO = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+            ºAssunto = ThisWorkbook.Sheets("LANÇAMENTOS").Range("B" & ºL).Value & " FASE " & ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+            If Application.IfError(Application.Match(ºAssunto, ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL).Address & ":" & Cells(5, ºCLÇTO).Address), 0), 0) > 0 Then
+                ºcol = Application.Match(ºAssunto, ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL).Address & ":" & Cells(5, ºCLÇTO).Address), 0) + ºLASTCOL - 1
+            Else
+                ºcol = ºCLÇTO
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºcol).Value = ºAssunto
+                ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºcol).Address & ":" & Cells(ºLINHASFLUXO, ºcol).Address).FormulaR1C1 = "=0"
+            End If
+            ºINICIO = ThisWorkbook.Sheets("LANÇAMENTOS").Range("G" & ºL).Value
+            ºEVENTO_V = ThisWorkbook.Sheets("LANÇAMENTOS").Range("H" & ºL).Value
+            If ºEVENTO_V <> "" Then
+                ºINICIO = DIF_DT_LCTO(ºEVENTO_V, 0)
+            End If
+            'COM OU SEM CURVA DE LANÇAMENTO NÃO LINEAR
+            If ThisWorkbook.Sheets("LANÇAMENTOS").Cells(ºL, 112).End(xlToLeft).Column < 11 Then ThisWorkbook.Sheets("LANÇAMENTOS").Range("J" & ºL).Value = False
+            If ThisWorkbook.Sheets("LANÇAMENTOS").Range("J" & ºL).Value Then
+                ºcolunas = ThisWorkbook.Sheets("LANÇAMENTOS").Cells(ºL, 112).End(xlToLeft).Column
+                For ºI = 11 To ºcolunas
+                    ºvalor = ThisWorkbook.Sheets("LANÇAMENTOS").Range("I" & ºL).Value * -1
+                    For ºLL = 6 To ºLINHASFLUXO - 1
+                        If ThisWorkbook.Sheets("Fluxo Operacional").Range("B" & ºLL).Value = ºINICIO + ºI - 11 Then
+                            ºParcentualC = ThisWorkbook.Sheets("LANÇAMENTOS").Cells(ºL, ºI).Value
+                            If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value), 0) > 0 Then ºvalor = ºvalor / 100
+                            If ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Terreno Fiscal" Then
+                                ºR = Application.Match("ºT_Valor do terreno Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value * (ºvalor * ºParcentualC))
+                                Exit For
+                            ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Terr. Liquido" Then
+                                ºR = Application.Match("ºT_Valor_Liquido", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value * (ºvalor * ºParcentualC))
+                                Exit For
+                            ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Prêmio" Then
+                                'Majorar Curva ?
+                                ºR = Application.Match("ºMJ_PREMIO", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                'Taxa Premio
+                                ºTX = TaxaPremio(ºPERF) * (1 + ºPRMT_FIS)
+                                ºvalor = ºvalor * ºTX
+                                ºColunas_Tabela = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+                                If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value And ThisWorkbook.Sheets("BD_CAD_VND").Range("c490").Value = "Primeira Venda" Then
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+(SUM(BD_CAD_VND!R3C15:R32C15)+SUMPRODUCT(INDIRECT(""BD_TBL_DEFLA_CMM!$B""&MATCH(R" & 6 + Abs(ºMenorINDICE) & "C2,BD_TBL_DEFLA_CMM!C1,0)&"":""&address(MATCH(RC2,BD_TBL_DEFLA_CMM!C1,0)," & ºColunas_Tabela & "))*N(BD_TBL_VND!R3C2:R3C" & ºColunas_Tabela & "=VALUE(SUBSTITUTE(R5C,""PRÊMIO FASE "","""")))))*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                Else
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                End If
+                                Exit For
+                            ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Marketing" Then
+                                'Majorar Curva ?
+                                ºR = Application.Match("ºMJ_MKT", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                ºTX = TaxaMarketing(ºPERF) * (1 + ºPRMT_FIS)
+                                ºvalor = ºvalor * ºTX
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                Exit For
+                            ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% E-Business" Then
+                                'Majorar Curva ?
+                                ºR = Application.Match("ºMJ_EB", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                ºTX = (TaxaEbusiness(ºPERF)) * (1 + ºPRMT_FIS)
+                                ºvalor = ºvalor * ºTX
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                Exit For
+                            ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% PDV" Then
+                                'Majorar Curva ?
+                                ºR = Application.Match("ºMJ_PDV", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                ºTX = TaxaPDV(ºPERF) * (1 + ºPRMT_FIS)
+                                ºvalor = ºvalor * ºTX
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                Exit For
+                            ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% DTAS" Then
+                                ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                ºTX = TaxaDTAS(209 + ºFSE_) * -1
+                                ºFormula = "+SUM(0)"
+                                For ºC = 1 To ºcol
+                                    If Left(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value, Len("CUSTO RASO F" & ºFSE_)) = "CUSTO RASO F" & ºFSE_ Then
+                                        ºFormula = "R4C" & ºC
+                                        Exit For
+                                    End If
+                                Next
+                                ºvalor = ºvalor * ºTX
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = "=" & ºFormula & "*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                Exit For
+                            ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Custo Raso Fase" Then
+                                ºC = Application.Match("VALOR Marjorado", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+                                ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                ºCustoRasoFase = "BD_CAD_VND!R" & 209 + ºFSE_ & "C15+BD_CAD_VND!R" & 209 + ºFSE_ & "C19"
+                                If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 <> "" Then ºFormula = "(" & Replace(ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1, "=", "", 1, 1) & ")+"
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = "=" & ºFormula & "(" & ºCustoRasoFase & ")*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                Exit For
+                            ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% VGV" Then
+                                ºvalor = ºvalor
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                Exit For
+                            Else
+                                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ºvalor * ºParcentualC)
+                                Exit For
+                            End If
+                        End If
+                    Next
+                Next
+            Else
+                ºPARCELAS = ThisWorkbook.Sheets("LANÇAMENTOS").Range("E" & ºL).Value
+                ºTipo = ThisWorkbook.Sheets("LANÇAMENTOS").Range("F" & ºL).Value
+                If ºTipo <> "Curva de Obra" Then
+                    ºLi = Application.Match(ºTipo, ThisWorkbook.Sheets("BD_CAD_VND").Range("C523:C550"), 0) + 522
+                    ºPeriodicidade = ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & ºLi).Value
+                    For ºI = 1 To ºPARCELAS
+                        ºvalor = ThisWorkbook.Sheets("LANÇAMENTOS").Range("I" & ºL).Value * -1
+                        For ºLL = 6 To ºLINHASFLUXO - 1 'ºPeriodicidade
+                            If ThisWorkbook.Sheets("Fluxo Operacional").Range("B" & ºLL).Value = ºINICIO + ((ºI - 1) * ºPeriodicidade) Then
+                                If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value), 0) > 0 Then ºvalor = ºvalor / 100
+                                If ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Terreno Fiscal" Then
+                                    ºR = Application.Match("ºT_Valor do terreno Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value * (ºvalor / ºPARCELAS))
+                                    Exit For
+                                ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Terr. Liquido" Then
+                                    ºR = Application.Match("ºT_Valor_Liquido", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value * (ºvalor / ºPARCELAS))
+                                    Exit For
+                                ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Prêmio" Then
+                                    'Majorar Curva ?
+                                    ºR = Application.Match("ºMJ_PREMIO", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                    ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                    ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                    ºTX = TaxaPremio(ºPERF) * (1 + ºPRMT_FIS)
+                                    ºvalor = ºvalor * ºTX
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor / ºPARCELAS), ",", ".")
+                                    Exit For
+                                ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Marketing" Then
+                                    'Majorar Curva ?
+                                    ºR = Application.Match("ºMJ_MKT", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                    ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                    ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                    ºTX = TaxaMarketing(ºPERF) * (1 + ºPRMT_FIS)
+                                    ºvalor = ºvalor * ºTX
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor / ºPARCELAS), ",", ".")
+                                    Exit For
+                                ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% E-Business" Then
+                                    'Majorar Curva ?
+                                    ºR = Application.Match("ºMJ_EB", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                    ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                    ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                    ºTX = TaxaEbusiness(ºPERF) * (1 + ºPRMT_FIS)
+                                    ºvalor = ºvalor * ºTX
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor / ºPARCELAS), ",", ".")
+                                    Exit For
+                                ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% PDV" Then
+                                    'Majorar Curva ?
+                                    ºR = Application.Match("ºMJ_PDV", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                    ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                    ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                    ºTX = TaxaPDV(ºPERF) * (1 + ºPRMT_FIS)
+                                    ºvalor = ºvalor * ºTX
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor / ºPARCELAS), ",", ".")
+                                    Exit For
+                                ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% DTAS" Then
+                                    ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                    ºTX = TaxaDTAS(209 + ºFSE_) * -1
+                                    ºFormula = "+SUM(0)"
+                                    For ºC = 1 To ºcol
+                                        If Left(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value, Len("CUSTO RASO F" & ºFSE_)) = "CUSTO RASO F" & ºFSE_ Then
+                                            ºFormula = "R4C" & ºC
+                                            Exit For
+                                        End If
+                                    Next
+                                    ºvalor = ºvalor * ºTX
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = "=" & ºFormula & "*" & Replace((ºvalor / ºPARCELAS), ",", ".")
+                                    Exit For
+                                ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Custo Raso Fase" Then
+                                    ºC = Application.Match("VALOR Marjorado", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+                                    ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                    ºCustoRasoFase = "BD_CAD_VND!R" & 209 + ºFSE_ & "C15+BD_CAD_VND!R" & 209 + ºFSE_ & "C19"
+                                    If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 <> "" Then ºFormula = "(" & Replace(ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1, "=", "", 1, 1) & ")+"
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = "=" & ºFormula & "(" & ºCustoRasoFase & ")*" & Replace((ºvalor / ºPARCELAS), ",", ".")
+                                    Exit For
+                                ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% VGV" Then
+                                    ºvalor = ºvalor
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor / ºPARCELAS), ",", ".")
+                                    Exit For
+                                Else
+                                    ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ºvalor / ºPARCELAS)
+                                    Exit For
+                                End If
+                            End If
+                        Next
+                    Next
+                Else
+                    ºCURVA = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value, 3).Value)
+                    If ºCURVA <> "" Then
+                        ºINICIO = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value, 11).Value, 0)
+                        ºvalor = ThisWorkbook.Sheets("LANÇAMENTOS").Range("I" & ºL).Value * -1
+                        If Application.IfError(Application.Search("%", ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value), 0) > 0 Then ºvalor = ºvalor / 100
+                        For ºP = 262 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, 1 + ºCURVA).End(xlUp).Row
+                            For ºLL = 6 To ºLINHASFLUXO - 1
+                                If ThisWorkbook.Sheets("Fluxo Operacional").Range("B" & ºLL).Value = ºINICIO + ºP - 262 Then
+                                    ºParcentualC = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºP, 1 + ºCURVA).Value
+                                    If ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Terreno Fiscal" Then
+                                        ºR = Application.Match("ºT_Valor do terreno Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value * (ºvalor * ºParcentualC))
+                                        Exit For
+                                    ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Terr. Liquido" Then
+                                        ºR = Application.Match("ºT_Valor_Liquido", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value * (ºvalor * ºParcentualC))
+                                        Exit For
+                                    ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Prêmio" Then
+                                        'Majorar Curva ?
+                                        ºR = Application.Match("ºMJ_PREMIO", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                        ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                        ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                        ºvalor = ºvalor * TaxaPremio(ºPERF)
+                                        ºColunas_Tabela = ThisWorkbook.Sheets("BD_TBL_VND").Cells(1, Columns.Count).End(xlToLeft).Column
+                                        If ThisWorkbook.Sheets("BD_CAD_VND").Range("B480").Value And Not ThisWorkbook.Sheets("BD_CAD_VND").Range("c490").Value Then
+                                            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+(SUM(BD_CAD_VND!R3C15:R32C15)+SUMPRODUCT(INDIRECT(""BD_TBL_DEFLA_CMM!$B""&MATCH(R6C2,BD_TBL_DEFLA_CMM!C1,0)&"":""&address(MATCH(RC2,BD_TBL_DEFLA_CMM!C1,0)," & ºColunas_Tabela & "))*N(BD_TBL_VND!R3C2:R3C" & ºColunas_Tabela & "=VALUE(SUBSTITUTE(R5C,""PRÊMIO FASE "","""")))))*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                        Else
+                                            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                        End If
+                                        Exit For
+                                    ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Marketing" Then
+                                        'Majorar Curva ?
+                                        ºR = Application.Match("ºMJ_MKT", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                        ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                        ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                        ºTX = TaxaMarketing(ºPERF) * (1 + ºPRMT_FIS)
+                                        ºvalor = ºvalor * ºTX
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                        Exit For
+                                    ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% E-Business" Then
+                                        'Majorar Curva ?
+                                        ºR = Application.Match("ºMJ_EB", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                        ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                        ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                        ºTX = TaxaEbusiness(ºPERF) * (1 + ºPRMT_FIS)
+                                        ºvalor = ºvalor * ºTX
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                        Exit For
+                                    ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% PDV" Then
+                                        ºC = Application.Match("PDV", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+                                        'Majorar Curva ?
+                                        ºR = Application.Match("ºMJ_PDV", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                                        ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                        ºPRMT_FIS = PRMTFIS(ºR, ºFSE_)
+                                        ºTX = TaxaPDV(ºPERF) * (1 + ºPRMT_FIS)
+                                        ºvalor = ºvalor * ºTX
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                        Exit For
+                                    ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% DTAS" Then
+                                        ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                        ºTX = TaxaDTAS(209 + ºFSE_) * -1
+                                        ºvalor = ºvalor * ºTX
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                        Exit For
+                                    ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% Custo Raso Fase" Then
+                                        ºC = Application.Match("VALOR Marjorado", ThisWorkbook.Sheets("BD_CAD_VND").Rows(209), 0)
+                                        ºFSE_ = ThisWorkbook.Sheets("LANÇAMENTOS").Range("A" & ºL).Value
+                                        ºCustoRasoFase = "BD_CAD_VND!R" & 209 + ºFSE_ & "C15+BD_CAD_VND!R" & 209 + ºFSE_ & "C19"
+                                        If ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 <> "" Then ºFormula = "(" & Replace(ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1, "=", "", 1, 1) & ")+"
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = "=" & ºFormula & "(" & ºCustoRasoFase & ")*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                        Exit For
+                                    ElseIf ThisWorkbook.Sheets("LANÇAMENTOS").Range("D" & ºL).Value = "% VGV" Then
+                                        ºvalor = Abs(ºvalor)
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).FormulaR1C1 & "+SUM(BD_CAD_VND!R3C15:R32C15)*" & Replace((ºvalor * ºParcentualC), ",", ".")
+                                        Exit For
+                                    Else
+                                        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value = ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºcol).Value + (ºvalor * ºParcentualC)
+                                        Exit For
+                                    End If
+                                End If
+                            Next
+                        Next
+                    End If
+                End If
+            End If
+        End If
+   Next
+   Lançamentos_Manuais = ºCLÇTO
+End Function
+Sub FormtPlan()
+ 'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Sub
+   
+   Dim ºLINHASFLUXO, ºC As Integer
+    ºLINHASFLUXO = ThisWorkbook.Sheets("Fluxo Operacional").Cells(Rows.Count, 2).End(xlUp).Row
+    For ºC = 5 To ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column
+        If Left(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value, 5) = "CURVA" Then
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC).Address & ":" & Cells(ºLINHASFLUXO, ºC).Address).NumberFormat = "#,##0.0000"
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(1, ºC).Address & ":" & Cells(ºLINHASFLUXO, ºC).Address).Font.Size = 10
+        ElseIf Left(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value, 8) = "UNIDADES" Then
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC).Address & ":" & Cells(ºLINHASFLUXO, ºC).Address).NumberFormat = "#,##0.00"
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(1, ºC).Address & ":" & Cells(ºLINHASFLUXO, ºC).Address).Font.Size = 10
+        Else
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(6, ºC).Address & ":" & Cells(ºLINHASFLUXO, ºC).Address).NumberFormat = "#,##0"
+            ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(1, ºC).Address & ":" & Cells(ºLINHASFLUXO, ºC).Address).Font.Size = 10
+        End If
+    Next
+    Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range("B6:B" & ºLINHASFLUXO))
+    Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range("C6:C" & ºLINHASFLUXO))
+    Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range("D6:D" & ºLINHASFLUXO))
+    ThisWorkbook.Sheets("Fluxo Operacional").Rows("5:5").RowHeight = 32
+    ThisWorkbook.Sheets("Fluxo Operacional").Range(Columns(5).Address & ":" & Columns(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column).Address).Columns.AutoFit
+End Sub
+
+Sub LCTO_TERRENOS(ºC_TOT_ANT, ºLINHASFLUXO, ºPERF, ºLASTCOL, ºVGV_TOTAL)
+'VERIFICAÇÃO DE ERRO
+On Error GoTo chamarform
+chamarform:
+If ErroMsg(Err) Then Exit Sub
+    
+    Dim ºTX_COM_DIR, ºTX_COM_DIR_2, ºTX_ITBI, ºTX_IMP, ºTX_PRMT, TX_RET, TX_RET_R, TX_PIS, TX_IR, TX_PIS_R, TX_IR_R, ºTX_participação As Double
+    Dim ºFORMULA_1, ºFORMULA_2, ºFORMULA_3, ºFormula, ºREGIME As String
+    Dim ºColunaLançamento, ºLASTCOL_2, ºR, ºLL, ºM_PGTO, ºC, ºMES, ºL, ºI As Integer
+    
+    ºColunaLançamento = ºC_TOT_ANT
+    ºLASTCOL_2 = ºC_TOT_ANT
+    'LANÇAMENTOS
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    ºColunaLançamento = Lançamentos_Manuais("1 TERRENO", ºColunaLançamento, CDbl(ºLINHASFLUXO), ºPERF, ºLASTCOL, ºVGV_TOTAL)
+    ºColunaLançamento = ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, 16000).End(xlToLeft).Column + 1
+   
+   'ITBI
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    ºR = Application.Match("ºT_Aliquota_ITBI", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text = "" Then ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value = 0
+    ºTX_ITBI = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text, "%", "")) / 100 * -1
+    ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "ITBI"
+    For ºLL = 6 To ºLINHASFLUXO Step 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).Value = 0
+    Next
+    For ºLL = 6 To ºLINHASFLUXO Step 1
+        ºR = Application.Match("ºT_Pagamento_ITBI", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value <> "" Then ºM_PGTO = CDbl(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value)
+        If ThisWorkbook.Sheets("Fluxo Operacional").Range("B" & ºLL).Value = ºM_PGTO Then
+            ºR = Application.Match("ºT_Valor do terreno Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).Value = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value * ºTX_ITBI
+            ºColunaLançamento = ºColunaLançamento + 1
+            Exit For
+        End If
+    Next
+   
+   'IMPOSTO
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    ºR = Application.Match("ºT_Valor do terreno Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value <> "" Then
+        For ºLL = 6 To ºLINHASFLUXO - 1 Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).Value = 0
+        Next
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "IMPOSTO SOBRE PERMUTA"
+        ºC = Application.Match("Mês de Pagamento", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+        ºR = Application.Match("ºT_Pagamento", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Text = "" Then Exit Sub
+        ºMES = ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Text * 1
+        ºR = Application.Match("ºT_Aliquota", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+        ºTX_IMP = Replace(ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Text, "%", "") / 100 * -1
+        For ºLL = 6 To ºLINHASFLUXO - 1 Step 1
+            If ThisWorkbook.Sheets("Fluxo Operacional").Range("B" & ºLL).Value = ºMES Then                '
+                ºR = Application.Match("ºT_Valor da Permuta Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = "=BD_CAD_VND!R" & ºR & "C3*" & Replace(ºTX_IMP, ",", ".")
+                ºColunaLançamento = ºColunaLançamento + 1
+                Exit For
+            End If
+        Next
+    End If
+    
+    'PERMUTA FINANCEIRA
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    ºC_TOT_ANT = Application.Match("RECEITA TOTAL", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+    ºR = Application.Match("ºT_Permuta Financeira", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+    If ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Value <> "" Then
+        ºTX_PRMT = CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Range("C" & ºR).Text, "%", "")) / 100 * -1
+        If ThisWorkbook.Sheets("BD_CAD_VND").Range("D" & ºR).Value = 2 Then
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "FUNDO DE PERMUTA / PARCERIA"
+        Else
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "PERMUTA FINANCEIRA"
+        End If
+        For ºLL = 6 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).Value = 0
+        Next
+        For ºLL = 7 To ºLINHASFLUXO Step 1
+            ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = "=R[-1]C" & ºC_TOT_ANT & "*-BD_CAD_VND!R464C3"
+        Next
+        ºColunaLançamento = ºColunaLançamento + 1
+        ºTX_PRMT = Replace(ºTX_PRMT * -1, ",", ".")
+        
+        'REEMBOLSO IMPOSTOS
+        ºC = Application.Match("Regime de Tributação", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+        ºREGIME = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Value
+        ºC_TOT_ANT = Application.Match("TOTAL IMPOSTOS ", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+        If ºREGIME = "RET" Then
+            ºC = Application.Match("Aliquota RET", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+            TX_RET = Replace(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100, ",", ".")
+            ºR = Application.Match("ºP_RET", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            TX_RET_R = Replace(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text, "%", "")) / 100, ",", ".")
+            If TX_RET_R <> 0 Then
+                ºFormula = "=RC" & ºC_TOT_ANT & "*(" & TX_RET_R & "/" & TX_RET & ")*" & ºTX_PRMT & "*-1"
+            End If
+        ElseIf ºREGIME <> "" Then
+            ºC = Application.Match("Aliquota IR/CSLL", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+            TX_PIS = Replace(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100, ",", ".")
+            ºC = Application.Match("Aliquota PIS/COFINS", ThisWorkbook.Sheets("BD_CAD_VND").Rows(158), 0)
+            TX_IR = Replace(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERF, ºC).Text, "%", "")) / 100, ",", ".")
+            ºR = Application.Match("ºP_IRCSLL", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            TX_PIS_R = Replace(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text, "%", "")) / 100, ",", ".")
+            ºR = Application.Match("ºP_PISCOFINS", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
+            TX_IR_R = Replace(CDbl(Replace(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text, "%", "")) / 100, ",", ".")
+            If TX_IR_R <> 0 Or TX_PIS_R <> 0 Then
+                ºFormula = "=RC" & ºC_TOT_ANT & "*((" & TX_PIS_R & "+" & TX_IR_R & ")/(" & TX_PIS & "+" & TX_IR & "))*" & ºTX_PRMT & "*-1"
+            End If
+        End If
+        If TX_IR_R <> 0 Or TX_PIS_R <> 0 Or TX_RET_R <> 0 Then
+            If ThisWorkbook.Sheets("BD_CAD_VND").Range("D464").Value = 2 Then
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "REEMBOLSO IMPOSTOS (FUNDO DE PERMUTA / PARCERIA)"
+            Else
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "REEMBOLSO IMPOSTOS (PERMUTA FINANCEIRA)"
+            End If
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento))
+            For ºL = 7 To ºLINHASFLUXO
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºColunaLançamento).FormulaR1C1 = ºFormula
+            Next
+            ºColunaLançamento = ºColunaLançamento + 1
+        End If
+        
+        'PARTICIPAÇÃO NOS CUSTOS E DESPESAS
+        If Reeb_Permt_fin <> 0 Then
+            ºC_TOT_ANT = Application.Match("COMISSÃO DIRETA", ThisWorkbook.Sheets("Fluxo Operacional").Rows(5), 0)
+            If ThisWorkbook.Sheets("BD_CAD_VND").Range("D464").Value = 2 Then
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "REEMBOLSO CUSTOS E DESPESAS (FUNDO DE PERMUTA / PARCERIA)"
+            Else
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "REEMBOLSO CUSTOS E DESPESAS (PERMUTA FINANCEIRA)"
+            End If
+            Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento))
+            ºFormula = ""
+            For ºC = 5 To ºC_TOT_ANT
+                If Application.IfError(Application.Search("VGV UNIDADES F", ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºC).Value), 0) <> 0 Then
+                    ºFormula = ºFormula & "+R[-1]C" & ºC
+                End If
+            Next
+            ºFormula = "=(((" & ºFormula & ")*" & ºTX_PRMT & ")*" & Replace(Reeb_Permt_fin, ",", ".") & ")" '+(R[-1]C" & ºC_TOT_ANT & "*" & ºTX_PRMT & ")"
+            For ºL = 7 To ºLINHASFLUXO
+                ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºL, ºColunaLançamento).FormulaR1C1 = ºFormula
+            Next
+            ºColunaLançamento = ºColunaLançamento + 1
+        End If
+    End If
+    'TOTAL
+    '¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+    ThisWorkbook.Sheets("Fluxo Operacional").Cells(5, ºColunaLançamento).Value = "TOTAL PEP 1"
+    Call INSERIR_BORDAS_2(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(3, ºColunaLançamento).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+
+    ºFormula = "="
+    For ºI = ºLASTCOL_2 To ºColunaLançamento - 1
+        ºFormula = ºFormula & "+RC" & ºI
+    Next
+    For ºLL = 6 To ºLINHASFLUXO Step 1
+        ThisWorkbook.Sheets("Fluxo Operacional").Cells(ºLL, ºColunaLançamento).FormulaR1C1 = ºFormula
+    Next
+    ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL_2).Address & ":" & Cells(2, ºColunaLançamento).Address).Merge
+    ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL_2).Address & ":" & Cells(2, ºColunaLançamento).Address).HorizontalAlignment = xlCenter
+    Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL_2).Address & ":" & Cells(2, ºColunaLançamento).Address))
+    Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL_2).Address & ":" & Cells(2, ºColunaLançamento).Address))
+    ThisWorkbook.Sheets("Fluxo Operacional").Cells(2, ºLASTCOL_2).Value = "PEP 1 TERRENO"
+    
+    Call FORMATAR_CINZA(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL_2).Address & ":" & Cells(5, ºColunaLançamento).Address))
+    Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(5, ºLASTCOL_2).Address & ":" & Cells(5, ºColunaLançamento).Address))
+    Call INSERIR_BORDAS(ThisWorkbook.Sheets("Fluxo Operacional").Range(Cells(2, ºLASTCOL_2).Address & ":" & Cells(ºLINHASFLUXO, ºColunaLançamento).Address))
+    ºColunaLançamento = ºColunaLançamento + 1
+End Sub
+Function PRMTFIS(ºR, ºFSE_)
+    'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Function
+    
+    'Majorar Curva ?
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value Then
+        PRMTFIS = Application.SumIf(ThisWorkbook.Sheets("BD_CAD_VND").Range("c3:c32"), ºFSE_, ThisWorkbook.Sheets("BD_CAD_VND").Range("S3:S32")) / Application.SumIf(ThisWorkbook.Sheets("BD_CAD_VND").Range("c3:c32"), ºFSE_, ThisWorkbook.Sheets("BD_CAD_VND").Range("o3:o32"))
+    Else
+        PRMTFIS = 0
+    End If
+End Function
+
+
+
+
+
