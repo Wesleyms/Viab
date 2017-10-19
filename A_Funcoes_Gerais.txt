@@ -1,0 +1,454 @@
+Attribute VB_Name = "A_Funcoes_Gerais"
+Public Const Mname As String = "MyPopUpMenu"
+Const SpecialCharacters As String = "!,@,#,$,%,^,&,*,(,),{,[,],},?,|"  'modify as needed
+
+
+Function TesteValor(ºvalor)
+    TesteValor = ºvalor
+    If ºvalor <> "" Then
+        If Len(ºvalor) - Len(Replace(ºvalor, ",", "")) > 1 Then
+            TesteValor = 0
+            Exit Function
+        End If
+        If Len(ºvalor) - Len(Replace(ºvalor, "%", "")) > 1 Then
+            TesteValor = 0
+            Exit Function
+        End If
+    End If
+    For ºC = 1 To Len(ºvalor)
+        ºL = Mid(ºvalor, ºC, 1)
+        If (Asc(ºL) < 48 Or Asc(ºL) > 57) And Asc(ºL) <> 37 And Asc(ºL) <> 44 And Asc(ºL) <> 45 And Asc(ºL) <> 46 Then
+            TesteValor = 0
+            Exit For
+        End If
+    Next
+End Function
+Sub FormatarNum(ºForm, ºElemento As String, Optional ByVal Casas As Integer)
+    For Each ºFormulario In UserForms
+        If ºFormulario.Name = ºForm Then Exit For
+    Next
+    Application.EnableEvents = False
+        ºvalor = TesteValor(ºFormulario.Controls(ºElemento).Value)
+        If ºvalor <> "" Then
+            If Application.IfError(Application.Search("%", ºvalor), 0) = 0 Then
+                ºFormato = "#,##0"
+                If Casas > 0 Then
+                    ºFormato = "#,##0."
+                    For ºI = 1 To Casas
+                        ºFormato = ºFormato & "0"
+                    Next
+                End If
+                ºFormulario.Controls(ºElemento).Value = Format(ºvalor, ºFormato) & "%"
+            End If
+        Else
+            ºFormulario.Controls(ºElemento).Value = 0
+        End If
+    Application.EnableEvents = True
+End Sub
+Function FormatarNum_dbl(ºvalor As String)
+    Application.EnableEvents = False
+    ºvalor = Replace(ºvalor, Chr(13), "")
+    If Application.IfError(Application.Search("%", ºvalor), 0) <> 0 Then
+        ºvalor = CDbl(TesteValor(Replace(ºvalor, "%", ""))) / 100
+    Else
+        ºvalor = TesteValor(ºvalor)
+    End If
+    If ºvalor <> "" Then
+        FormatarNum_dbl = CDbl(ºvalor)
+    Else
+        FormatarNum_dbl = ""
+    End If
+    Application.EnableEvents = True
+End Function
+
+Sub FormatarNumCur(ºForm, ºElemento As String, Casas As Integer)
+    Application.EnableEvents = False
+    For Each ºFormulario In UserForms
+        If ºFormulario.Name = ºForm Then Exit For
+    Next
+    ºvalor = TesteValor(ºFormulario.Controls(ºElemento).Value)
+    If ºvalor <> "" Then
+        ºFormato = "#,##0"
+        If Casas > 0 Then
+            ºFormato = "#,##0."
+            For ºI = 1 To Casas
+                ºFormato = ºFormato & "0"
+            Next
+        End If
+        ºFormulario.Controls(ºElemento).Value = Format(ºvalor, ºFormato)
+    Else
+        ºFormulario.Controls(ºElemento).Value = ""
+    End If
+    Application.EnableEvents = True
+End Sub
+Sub FORMATAR_CINZA(SELEÇÃO As Range)
+SELEÇÃO.Font.Bold = True
+With SELEÇÃO.Interior
+    .Pattern = xlSolid
+    .PatternColorIndex = xlAutomatic
+    .ThemeColor = xlThemeColorDark1
+    .TintAndShade = -0.249977111117893
+    .PatternTintAndShade = 0
+End With
+End Sub
+Sub INSERIR_BORDAS(SELEÇÃO As Range)
+    With SELEÇÃO.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With SELEÇÃO.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With SELEÇÃO.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With SELEÇÃO.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+End Sub
+Sub INSERIR_BORDAS_2(SELEÇÃO As Range)
+    With SELEÇÃO.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With SELEÇÃO.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With SELEÇÃO.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With SELEÇÃO.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With SELEÇÃO.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = -0.149998474074526
+        .PatternTintAndShade = 0
+    End With
+End Sub
+Public Function SomarColuna(Referencia As Range, Criterio As String, LinhaSaldo As Integer)
+    For ºC = 1 To Referencia.Worksheet.Cells(Referencia.Row, Columns.Count).End(xlToLeft).Column
+        If Application.IfError(Application.Search(Criterio, Referencia.Worksheet.Cells(Referencia.Row, ºC)), 0) <> 0 Then
+            SomarColuna = SomarColuna + Referencia.Worksheet.Cells(LinhaSaldo, ºC).Value
+        End If
+    Next
+End Function
+Private Sub UserForm_Resize()
+If IsIconic(mFrmHwnd) Then
+    ShowWindow mFrmHwnd, SW_HIDE
+    SetWindowLong mFrmHwnd, GWL_HWNDPARENT, GetDesktopWindow
+    ShowWindow mFrmHwnd, SW_MINIMIZE
+Else ' form being restored
+    If IsIconic(mAppHwnd) Then
+        ' if XL is minimized restore it
+        ShowWindow mAppHwnd, SW_RESTORE
+    Else
+        ' in case XL is not active window
+        AppActivate (Application.Caption)
+    End If
+    SetWindowLong mFrmHwnd, GWL_HWNDPARENT, mAppHwnd
+End If
+End Sub
+Function DIF_DT_LCTO(ºEVENTO_V As Variant, FASEO As Integer) As Double
+    If Application.IfError(Application.Search("LCTO", ºEVENTO_V), 0) <> 0 Then
+        ºData_lcto = ºDATA_FASE_1("")
+        ºData = DateValue(ºDATA_BASE_FLX)
+        If ºData_lcto = "" Then ºData_lcto = ºData
+        DIF_DT_LCTO = DateDiff("m", ºData, ºData_lcto) + CDbl(Replace(ºEVENTO_V, "LCTO ", ""))
+    ElseIf Application.IfError(Application.Search("INIVND", ºEVENTO_V), 0) <> 0 Then
+        ºPERFILV = CDbl(Left(Replace(ºEVENTO_V, "INIVND PRF", ""), Application.Search(" ", Replace(ºEVENTO_V, "INIVND PRF", "")) - 1))
+        ºMESES_D = CDbl(Replace(Right(Replace(ºEVENTO_V, "INIVND PRF", ""), Len(Replace(ºEVENTO_V, "INIVND PRF", "")) - Application.Search(" ", Replace(ºEVENTO_V, "INIVND PRF", ""))), " MES(ES)", ""))
+        ºTblVel = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºPERFILV + 900, 3).Value
+        ºInicioVnd = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, 5).Value, 0)
+        For ºCOLBD = 3 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, Columns.Count).End(xlToLeft).Column Step 3
+            If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD).Value <> "" Then
+                If ºInicioVnd > DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0) Then
+                    ºInicioVnd = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºTblVel + 56, ºCOLBD + 2).Value, 0)
+                End If
+            End If
+        Next
+        DIF_DT_LCTO = ºInicioVnd + ºMESES_D
+    ElseIf Application.IfError(Application.Search("FIMOBR", ºEVENTO_V), 0) <> 0 Then
+        If FASEO = 0 Then
+            ºFASEO = CDbl(Left(Replace(ºEVENTO_V, "FIMOBR FSE", ""), Application.Search(" ", Replace(ºEVENTO_V, "FIMOBR FSE", "")) - 1))
+            ºMESES_D = CDbl(Replace(Right(Replace(ºEVENTO_V, "FIMOBR FSE", ""), Len(Replace(ºEVENTO_V, "FIMOBR FSE", "")) - Application.Search(" ", Replace(ºEVENTO_V, "FIMOBR FSE", ""))), " MES(ES)", ""))
+        Else
+            ºFASEO = FASEO
+            ºMESES_D = CDbl(Replace(Replace(ºEVENTO_V, "FIMOBR ", ""), " MES(ES)", ""))
+        End If
+        ºCURVA = FormatDouble(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ºFASEO, 3).Value)
+        If ºCURVA = 0 Then
+            ºM_INI_OBRA = 0
+            ºM_FIM_OBRA = 0
+        Else
+            ºM_INI_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ºFASEO, 11).Value, 0)
+            ºM_FIM_OBRA = DIF_DT_LCTO(ºM_INI_OBRA, 0) + ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, 1 + ºCURVA).End(xlUp).Row - 262
+        End If
+        DIF_DT_LCTO = ºM_FIM_OBRA + ºMESES_D
+    ElseIf Application.IfError(Application.Search("INIOBR", ºEVENTO_V), 0) <> 0 Then
+        If FASEO = 0 Then
+            ºFASEO = CDbl(Left(Replace(ºEVENTO_V, "INIOBR FSE", ""), Application.Search(" ", Replace(ºEVENTO_V, "INIOBR FSE", "")) - 1))
+            ºMESES_D = CDbl(Replace(Right(Replace(ºEVENTO_V, "INIOBR FSE", ""), Len(Replace(ºEVENTO_V, "INIOBR FSE", "")) - Application.Search(" ", Replace(ºEVENTO_V, "INIOBR FSE", ""))), " MES(ES)", ""))
+        Else
+            ºFASEO = FASEO
+            ºMESES_D = CDbl(Replace(Replace(ºEVENTO_V, "INIOBR ", ""), " MES(ES)", ""))
+        End If
+        ºCURVA = FormatDouble(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ºFASEO, 3).Value)
+        If ºCURVA = 0 Then
+            ºM_INI_OBRA = 0
+            ºM_FIM_OBRA = 0
+        Else
+            ºM_INI_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ºFASEO, 11).Value, 0)
+            ºM_FIM_OBRA = DIF_DT_LCTO(ºM_INI_OBRA, 0) + ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, 1 + ºCURVA).End(xlUp).Row - 262
+        End If
+        DIF_DT_LCTO = ºM_INI_OBRA + ºMESES_D
+    Else
+        DIF_DT_LCTO = ºEVENTO_V
+    End If
+End Function
+Sub InserirBordaPerfVND(ºRng As Range)
+    ºRng.Borders(xlDiagonalDown).LineStyle = xlNone
+    ºRng.Borders(xlDiagonalUp).LineStyle = xlNone
+    ºRng.Borders(xlEdgeLeft).Weight = xlMedium
+    ºRng.Borders(xlEdgeTop).Weight = xlMedium
+    ºRng.Borders(xlEdgeBottom).Weight = xlMedium
+    ºRng.Borders(xlEdgeRight).Weight = xlMedium
+    ºRng.Borders(xlInsideVertical).Weight = xlThin
+    ºRng.Borders(xlInsideHorizontal).Weight = xlThin
+End Sub
+Function LOC_COLUNA(ºForm, ºElemento, ºcoluna As String)
+    For Each ºFormulario In UserForms
+        If ºFormulario.Name = ºForm Then Exit For
+    Next
+    For Each ºCH In ºFormulario.Controls(ºElemento).ColumnHeaders
+        If ºcoluna = ºCH.Text Then
+            LOC_COLUNA = ºCH.Index
+            Exit For
+        End If
+    Next
+End Function
+Sub DeletePopUpMenu()
+    
+    ' Delete the popup menu if it already exists.
+    On Error Resume Next
+    'If Mname <> "" Then Application.CommandBars(Mname).Delete
+    On Error GoTo 0
+End Sub
+
+Sub CreateDisplayPopUpMenu()
+    ' Delete any existing popup menu.
+    Call DeletePopUpMenu
+
+    ' Create the popup menu.
+    Call Custom_PopUpMenu_1
+
+    ' Display the popup menu.
+    On Error Resume Next
+    Application.CommandBars(Mname).ShowPopup
+    On Error GoTo 0
+End Sub
+
+Sub Custom_PopUpMenu_1()
+    Dim MenuItem As CommandBarPopup
+    Dim ºCOMAND As Object
+    Dim a As Variant
+    ' Add the popup menu.
+    For Each ºCOMAND In Application.CommandBars
+        If Mname = ºCOMAND.Name Then ºCOMAND.Delete
+    Next
+    With Application.CommandBars.Add(Name:=Mname, Position:=msoBarPopup, MenuBar:=False, Temporary:=True)
+        ' Next, add a menu that contains two buttons.
+        Set MenuItem = .Controls.Add(Type:=msoControlPopup)
+        With MenuItem
+            .Caption = "Gerar Book"
+            With .Controls.Add(Type:=msoControlButton)
+                .Caption = "Exportar em PDF"
+                '.FaceId = 71
+                .OnAction = "'" & ThisWorkbook.Name & "'!" & "Gerar_Book_PDF"
+            End With
+            With .Controls.Add(Type:=msoControlButton)
+                .Caption = "Exportar em Excel"
+                '.FaceId = 72
+                .OnAction = "'" & ThisWorkbook.Name & "'!" & "Gerar_Book_Excel"
+            End With
+        End With
+        With .Controls.Add(Type:=msoControlButton)
+            .Caption = "Relatorios de Curvas"
+            '.FaceId = 71
+            .OnAction = "'" & ThisWorkbook.Name & "'!" & "Criar_Curvas"
+        End With
+        With .Controls.Add(Type:=msoControlButton)
+            .Caption = "Relatorios de Receitas"
+            '.FaceId = 71
+            .OnAction = "'" & ThisWorkbook.Name & "'!" & "GerarReceitas"
+        End With
+    End With
+End Sub
+
+
+Function BubbleSort(arr, ºcoluna, ºcolunas)
+  Dim strTemp As Variant
+  Dim i As Long
+  Dim j As Long
+  Dim lngMin As Long
+  Dim lngMax As Long
+  ReDim strTemp(0, ºcolunas)
+  lngMin = LBound(arr)
+  lngMax = UBound(arr)
+  For i = lngMin To lngMax - 1
+    For j = i + 1 To lngMax
+      If arr(i, ºcoluna) > arr(j, ºcoluna) Then
+        For ºC = 0 To ºcolunas
+            strTemp(0, ºC) = arr(i, ºC)
+        Next
+        For ºC = 0 To ºcolunas
+            arr(i, ºC) = arr(j, ºC)
+        Next
+        For ºC = 0 To ºcolunas
+            arr(j, ºC) = strTemp(0, ºC)
+        Next
+      End If
+    Next j
+  Next i
+  BubbleSort = arr
+End Function
+Function ErroMsg(N_Err As Variant) As Boolean
+    ErroMsg = False
+    If N_Err.Number <> 0 Then
+        MsgBox "erro " & N_Err.Number & Chr(10) & N_Err.Description
+        LogError N_Err.Number, N_Err.Description, ºCODIGO_EMP("") & "-" & ºCOD_VERSÃO(""), , False
+        N_Err.Clear
+        A_CadastroUnidades
+        ErroMsg = True
+    End If
+End Function
+Function FormatDouble(ºvalor) As Double
+    If ºvalor <> "" Then
+        FormatDouble = CDbl(ºvalor)
+    Else
+        FormatDouble = 0
+    End If
+End Function
+
+
+Function newString(myString)
+Dim char As Variant
+For Each char In Split(SpecialCharacters, ",")
+    newString = Replace(myString, char, " ")
+Next
+End Function
+
+
+' This function checks to see if a file is open or not. If the file is
+' already open, it returns True. If the file is not open, it returns
+' False. Otherwise, a run-time error occurs because there is
+' some other problem accessing the file.
+
+Function IsFileOpen(filename As String)
+    Dim filenum As Integer, errnum As Integer
+    On Error Resume Next   ' Turn error checking off.
+    filenum = FreeFile()   ' Get a free file number.
+    ' Attempt to open the file and lock it.
+    Open filename For Input Lock Read As #filenum
+    Close filenum          ' Close the file.
+    errnum = Err           ' Save the error number that occurred.
+    On Error GoTo 0        ' Turn error checking back on.
+
+    ' Check to see which error occurred.
+    Select Case errnum
+
+        ' No error occurred.
+        ' File is NOT already open by another user.
+        Case 0
+         IsFileOpen = False
+
+        ' Error number for "Permission Denied."
+        ' File is already opened by another user.
+        Case 70
+            IsFileOpen = True
+
+        ' Another error occurred.
+        Case Else
+            Error errnum
+    End Select
+
+End Function
+
+Function LogError(ByVal lngErrNumber As Long, ByVal strErrDescription As String, strCallingProc As String, Optional vParameters, Optional bShowUser As Boolean = True) As Boolean
+On Error GoTo Err_LogError
+    ' Purpose: Generic error handler.
+    ' Logs errors to table "tLogError".
+    ' Arguments: lngErrNumber - value of Err.Number
+    ' strErrDescription - value of Err.Description
+    ' strCallingProc - name of sub|function that generated the error.
+    ' vParameters - optional string: List of parameters to record.
+    ' bShowUser - optional boolean: If False, suppresses display.
+    ' Author: Allen Browne, allen@allenbrowne.com
+
+    Dim strMsg, Valores As String     ' String for display in MsgBox
+    'Dim rst As DAO.Recordset  ' The tLogError table
+
+    Select Case lngErrNumber
+    Case 0
+        Debug.Print strCallingProc & " called error 0."
+    Case 2501                ' Cancelled
+        'Do nothing.
+    Case 3314, 2101, 2115    ' Can't save.
+        If bShowUser Then
+            strMsg = "Record cannot be saved at this time." & vbCrLf & _
+                "Complete the entry, or press <Esc> to undo."
+            MsgBox strMsg, vbExclamation, strCallingProc
+        End If
+    Case Else
+        If bShowUser Then
+            strMsg = "Error " & lngErrNumber & ": " & strErrDescription
+            MsgBox strMsg, vbExclamation, strCallingProc
+        End If
+        Valores = "'" & lngErrNumber & "', "
+        Valores = Valores & "'" & Left$(strErrDescription, 255) & "', "
+        Valores = Valores & "'" & Format(Now(), "HH:MM DD/MM/YYYY") & "', "
+        Valores = Valores & "'" & strCallingProc & "', "
+        Valores = Valores & "'" & Environ("username") & "'" ' & "', "
+        InsertMatriz CStr("LogError"), CStr("ErrNumber, ErrDescription, ErrDate, callingproc, UserName"), Valores
+        LogError = True
+    End Select
+
+Exit_LogError:
+    Set rst = Nothing
+    Exit Function
+
+Err_LogError:
+    strMsg = "An unexpected situation arose in your program." & vbCrLf & _
+        "Please write down the following details:" & vbCrLf & vbCrLf & _
+        "Calling Proc: " & strCallingProc & vbCrLf & _
+        "Error Number " & lngErrNumber & vbCrLf & strErrDescription & vbCrLf & vbCrLf & _
+        "Unable to record because Error " & Err.Number & vbCrLf & Err.Description
+    MsgBox strMsg, vbCritical, "LogError()"
+    Resume Exit_LogError
+End Function
+
+
