@@ -100,7 +100,11 @@ chamarform:
     If OK.Caption = "LCTO" Then
         CadastroUnidades.CB_EVENTO_TI.Clear
         If OptionButton2.Value Then
-            If TB_Meses_Event = "" Then
+            If CB_Perf_Tipologia_1 = "" Then
+                MsgBox "Selecione um perfil de venda para realizar o vinculo!"
+                Exit Sub
+            End If
+           If TB_Meses_Event = "" Then
                 TB_Meses_Event.Value = 0
                 Call TB_Meses_Event_AFTERUPDATE
             End If

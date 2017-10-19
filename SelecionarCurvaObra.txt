@@ -14,6 +14,7 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 
+
 Private Sub BT_EDIT_TBL_Click()
     ºNome = LV_Curvas_Estd.SelectedItem.SubItems(1)
     If MsgBox("Confirma o compartilhamento da curva?", vbYesNo) = vbYes And ºNome <> "" Then

@@ -17,6 +17,7 @@ Attribute VB_Exposed = False
 
 
 
+
 Sub CARREGAR_TABELAS()
     Application.ScreenUpdating = False
     Application.DisplayAlerts = False

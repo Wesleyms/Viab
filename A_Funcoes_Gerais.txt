@@ -45,6 +45,7 @@ Sub FormatarNum(ºForm, ºElemento As String, Optional ByVal Casas As Integer)
         End If
     Application.EnableEvents = True
 End Sub
+
 Function FormatarNum_dbl(ºvalor As String)
     Application.EnableEvents = False
     ºvalor = Replace(ºvalor, Chr(13), "")
@@ -205,7 +206,7 @@ Function DIF_DT_LCTO(ºEVENTO_V As Variant, FASEO As Integer) As Double
             ºM_INI_OBRA = 0
             ºM_FIM_OBRA = 0
         Else
-            ºM_INI_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ºFASEO, 11).Value, 0)
+            ºM_INI_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, 1 + ºCURVA).Value, 0)
             ºM_FIM_OBRA = DIF_DT_LCTO(ºM_INI_OBRA, 0) + ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, 1 + ºCURVA).End(xlUp).Row - 262
         End If
         DIF_DT_LCTO = ºM_FIM_OBRA + ºMESES_D
@@ -222,7 +223,7 @@ Function DIF_DT_LCTO(ºEVENTO_V As Variant, FASEO As Integer) As Double
             ºM_INI_OBRA = 0
             ºM_FIM_OBRA = 0
         Else
-            ºM_INI_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + ºFASEO, 11).Value, 0)
+            ºM_INI_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, 1 + ºCURVA).Value, 0)
             ºM_FIM_OBRA = DIF_DT_LCTO(ºM_INI_OBRA, 0) + ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, 1 + ºCURVA).End(xlUp).Row - 262
         End If
         DIF_DT_LCTO = ºM_INI_OBRA + ºMESES_D
@@ -450,5 +451,3 @@ Err_LogError:
     MsgBox strMsg, vbCritical, "LogError()"
     Resume Exit_LogError
 End Function
-
-

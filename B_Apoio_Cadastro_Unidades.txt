@@ -1374,53 +1374,47 @@ Sub CarregarCurvasOB()
 chamarform:
     If ErroMsg(Err) Then Exit Sub
     
-    With ThisWorkbook.Sheets("BD_CAD_VND")
-        If .Cells(260, Columns.Count).End(xlToLeft).Column > 1 And .Cells(259, 2).End(xlUp).Row > 209 Then
-            'CONFIGURA A LISTVIEW
-            '======================================
-            CadastroUnidades.LV_CurvasObra.ColumnHeaders.Clear
-            CadastroUnidades.LV_CurvasObra.ColumnHeaders.Add , , "Mês", 28
-            CadastroUnidades.LV_CurvasObra.View = lvwReport
-            CadastroUnidades.LV_CurvasObra.FullRowSelect = True
-            CadastroUnidades.LV_CurvasObra.ListItems.Clear
-            '======================================
-            
-            'verifica qual a menor data para iniciar a contagem dos meses
-            '-------------------------------------------------------------------------------------------------------
+    If ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column > 1 Then
+        With CadastroUnidades.LV_CurvasObra
+            'adiciona colunas
+            With .ColumnHeaders
+                .Clear
+                .Add , , "Mês", 28
+            End With
+            .View = lvwReport
+            .FullRowSelect = True
+            .ListItems.Clear
             Menor = 0
-            For Fase = 210 To .Cells(259, 2).End(xlUp).Row
-                If DIF_DT_LCTO(.Cells(Fase, 11).Value, 0) < Menor Then Menor = DIF_DT_LCTO(.Cells(Fase, 11).Value, 0)
+            Maior = 0
+            For ºC = 2 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column
+                ºDT_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, ºC).Value, 0)
+                If Menor > ºDT_OBRA Then Menor = ºDT_OBRA
+                If Maior < ((ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, ºC).End(xlUp).Row - 261) + ºDT_OBRA - 1) Then Maior = (ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, ºC).End(xlUp).Row - 261) + ºDT_OBRA - 1
             Next
-            For ºL = Menor To 5
-                CadastroUnidades.LV_CurvasObra.ListItems.Add , , ºL
+            For ºL = Menor To Maior + 1
+                Set ºLi = .ListItems.Add(, , ºL)
             Next
-            '-------------------------------------------------------------------------------------------------------
-            
-            For Fase = 210 To .Cells(259, 2).End(xlUp).Row
-                ºC = .Cells(Fase, 3).Value + 1
-                If ºC <> "" Then
-                    CadastroUnidades.LV_CurvasObra.ColumnHeaders.Add , , "FASE " & Fase - 209, 60
-                    ºDT_OBRA = DIF_DT_LCTO(.Cells(Fase, 11).Value, 0)
+            For ºC = 2 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column
+                If ThisWorkbook.Sheets("BD_CAD_VND").Cells(2, ºC).Value <> "" Then
+                    .ColumnHeaders.Add , , ºC - 1 & " | " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value, 60
+                    LPCurvas = ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, ºC).End(xlUp).Row
+                    ºDT_OBRA = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, ºC).Value, 0)
                     If Menor <> ºDT_OBRA Then
                         For ºL = Menor To ºDT_OBRA
-                            If ºL - Menor + 1 > CadastroUnidades.LV_CurvasObra.ListItems.Count Then _
-                            CadastroUnidades.LV_CurvasObra.ListItems.Add , , CadastroUnidades.LV_CurvasObra.ListItems(ºL - Menor) + 1
-                            Set ºLi = CadastroUnidades.LV_CurvasObra.ListItems(ºL - Menor + 1)
-                            ºLi.SubItems(Fase - 209) = Format(0, "0.0000%")
+                            Set ºLi = .ListItems(ºL - Menor + 1)
+                            ºLi.SubItems(ºC - 1) = Format(0, "0.00%")
                         Next
                     End If
-                    For ºL = 262 To .Cells(461, ºC).End(xlUp).Row
-                        If ºL - 261 + ºDT_OBRA - Menor > CadastroUnidades.LV_CurvasObra.ListItems.Count Then _
-                        CadastroUnidades.LV_CurvasObra.ListItems.Add , , CadastroUnidades.LV_CurvasObra.ListItems(ºL - 261 + ºDT_OBRA - Menor - 1) + 1
-                        If .Cells(ºL, ºC).Value <> "" Then
-                            Set ºLi = CadastroUnidades.LV_CurvasObra.ListItems(ºL - 261 + ºDT_OBRA - Menor)
-                            ºLi.SubItems(Fase - 209) = Format(.Cells(ºL, ºC).Value, "0.0000%")
+                    For ºL = 262 To LPCurvas
+                        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value <> "" Then
+                            Set ºLi = .ListItems(ºL - 261 + ºDT_OBRA - Menor)
+                            ºLi.SubItems(ºC - 1) = Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºL, ºC).Value, "0.00%")
                         End If
                     Next
-                End If
+               End If
             Next
-        End If
-    End With
+        End With
+    End If
 End Sub
 
 Sub TotaisObra()
@@ -1614,6 +1608,18 @@ chamarform:
     CadastroUnidades.PEP_FILTRO.AddItem "8.3 DESP. C/ FINANC. (CA)"
     CadastroUnidades.PEP_FILTRO.AddItem "OUTRAS RECEITAS"
 End Sub
+Sub CarregarCurvasLB()
+    'VERIFICAÇÃO DE ERRO
+    On Error GoTo chamarform
+chamarform:
+    If ErroMsg(Err) Then Exit Sub
+    CadastroUnidades.CB_Curva.Clear
+    For ºC = 2 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, Columns.Count).End(xlToLeft).Column
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value <> "" Then
+            CadastroUnidades.CB_Curva.AddItem ºC - 1 & " | " & ThisWorkbook.Sheets("BD_CAD_VND").Cells(260, ºC).Value
+        End If
+    Next
+End Sub
 
 Sub Limpar_PG_Curva()
     'VERIFICAÇÃO DE ERRO
@@ -1687,7 +1693,7 @@ chamarform:
         If .TB_INCORRIDO.Value = "" Then .TB_INCORRIDO.Value = "0,00"
         If Check Then
             ºCURVA = CInt(Left(.CB_Curva.Value, Application.Search("|", .CB_Curva.Value) - 2))
-            'ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, 1 + ºCURVA).Value = .TB_INI_OBRA.Value
+            ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, 1 + ºCURVA).Value = .TB_INI_OBRA.Value
             ºFASE = CDbl(.CB_Fase.Value)
             If .LV_FasesObra.ListItems.Count >= ºFASE Then
                 .LV_FasesObra.ListItems(ºFASE).SubItems(1) = Left(.CB_Curva.Value, Application.Search(" | ", .CB_Curva.Value) - 1)
@@ -1798,12 +1804,16 @@ chamarform:
         .ºCB_permuta_fin.AddItem "% de Permuta Fin. / VGV"
         .ºCB_permuta_fin.AddItem "% Fundo de Permuta / Parceria"
         'AREA
+        .TB_Metragem_T.Value = 0
         ºR = Application.Match("ºT_Area", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-        .TB_Metragem_T.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text <> "" Then .TB_Metragem_T.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
         Call FormatarNumCur("CadastroUnidades", "TB_Metragem_T", 4)
+        
         'PERCENTUAL PERMUTADO
+        .TB_PRTC_PRMT.Value = 0
         ºR = Application.Match("ºT_Permutado", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-        .TB_PRTC_PRMT.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value <> "" Then .TB_PRTC_PRMT.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+        
         'TAXA PERMUTA FINANCEIRA
         ºR = Application.Match("ºT_Permuta Financeira", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
         .TB_TX_Permut_Fin.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
@@ -1812,27 +1822,41 @@ chamarform:
         Else
             .ºCB_permuta_fin.Value = "% de Permuta Fin. / VGV"
         End If
+        
         'VALOR DO TERRENO ESCRITURA
         ºR = Application.Match("ºT_Valor do terreno Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-        .TB_VGV_Terreno_Fiscal.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        .TB_VGV_Terreno_Fiscal.Value = 0
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text <> "" Then .TB_VGV_Terreno_Fiscal.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        
         'VALOR DA PERMUTA ESCRITURA
         ºR = Application.Match("ºT_Valor da Permuta Escritura", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-        .TB_VGV_Permuta_Fiscal.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        .TB_VGV_Permuta_Fiscal.Value = 0
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text <> "" Then .TB_VGV_Permuta_Fiscal.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        
         'ALIQUOTA
         ºR = Application.Match("ºT_Aliquota", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-        .TB_TX_Permuta.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        .TB_TX_Permuta.Value = 0
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text <> "" Then .TB_TX_Permuta.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        
         'MES DE PAGAMENTO
         ºR = Application.Match("ºT_Pagamento", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-        .TB_MES_PGTO.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        .TB_MES_PGTO.Value = 0
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text <> "" Then .TB_MES_PGTO.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Text
+        
         'ALIQUOTA ITBI
         ºR = Application.Match("ºT_Aliquota_ITBI", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-         .TB_TX_ITBI.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+         .TB_TX_ITBI.Value = 0
+         If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value <> "" Then .TB_TX_ITBI.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+        
         'MES DE PAGAMENTO ITBI
         ºR = Application.Match("ºT_Pagamento_ITBI", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-        .TB_PG_ITBI.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+        .TB_PG_ITBI.Value = 0
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value <> "" Then .TB_PG_ITBI.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+        
         'VALOR LIQUIDO TERRENO
         ºR = Application.Match("ºT_Valor_Liquido", ThisWorkbook.Sheets("BD_CAD_VND").Columns(2), 0)
-        .TB_Valor_Liquido.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
+        .TB_Valor_Liquido.Value = 0
+        If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value <> "" Then .TB_Valor_Liquido.Value = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºR, 3).Value
     End With
     Call Carregar_Prmt_Terreno
 End Sub
@@ -2317,11 +2341,26 @@ chamarform:
         .ColumnHeaders.Add , , "Associativo?", 80
         For ºlIN = 901 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(951, 2).End(xlUp).Row
             If ºlIN > 900 Then
-                Set ºLi = .ListItems.Add(, , ºlIN - 900)
+                Set ºLi = .ListItems.Add(, , ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 1).Value)
                 ºLi.SubItems(1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 2).Value
                 ºLi.SubItems(2) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 3).Value
-                ºLi.SubItems(3) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 4).Value
-                ºLi.SubItems(4) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 5).Value
+                
+                ºTabela = Replace(Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 4).Value, 2), " ", "")
+                If ºTabela <> "" Then
+                    ºnomeTabela = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTabela, 2).Value
+                    ºLi.SubItems(3) = ºTabela & " | " & ºnomeTabela
+                Else
+                    ºLi.SubItems(3) = ""
+                End If
+                
+                ºTabela = Replace(Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 5).Value, 2), " ", "")
+                If ºTabela <> "" Then
+                    ºnomeTabela = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTabela, 2).Value
+                    ºLi.SubItems(4) = ºTabela & " | " & ºnomeTabela
+                Else
+                    ºLi.SubItems(4) = ""
+                End If
+                
                 ºLi.SubItems(5) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 6).Text
                 If ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 7).Value Then ºLi.SubItems(6) = "Sim" Else ºLi.SubItems(6) = "Não"
             End If
@@ -2345,8 +2384,25 @@ chamarform:
                 Set ºLi = .ListItems.Add(, , ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 1).Value)
                 ºLi.SubItems(1) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 2).Value
                 ºLi.SubItems(2) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 3).Value
-                ºLi.SubItems(3) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 4).Value
-                ºLi.SubItems(4) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 5).Value
+                
+                ºTabela = Replace(Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 4).Value, 2), " ", "")
+                If ºTabela <> "" Then
+                    ºnomeTabela = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTabela, 2).Value
+                    ºLi.SubItems(3) = ºTabela & " | " & ºnomeTabela
+                Else
+                    ºLi.SubItems(3) = ""
+                End If
+                
+                ºTabela = Replace(Left(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 5).Value, 2), " ", "")
+                If ºTabela <> "" Then
+                    ºnomeTabela = ThisWorkbook.Sheets("BD_CAD_VND").Cells(107 + ºTabela, 2).Value
+                    ºLi.SubItems(4) = ºTabela & " | " & ºnomeTabela
+                Else
+                    ºLi.SubItems(4) = ""
+                End If
+                
+                'ºLi.SubItems(3) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 4).Value
+                'ºLi.SubItems(4) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 5).Value
                 ºLi.SubItems(5) = ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºlIN, 6).Text
             End If
         Next
@@ -2809,7 +2865,7 @@ chamarform:
         Else
             ºCURVA = CInt(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + CadastroUnidades.LV_Lançamentos_TI.ListItems(ºItem), 3).Value)
             If ºCURVA <> "" Then
-                ºINICIO = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(209 + CadastroUnidades.LV_Lançamentos_TI.ListItems(ºItem), 11).Value, 0)
+                ºINICIO = DIF_DT_LCTO(ThisWorkbook.Sheets("BD_CAD_VND").Cells(261, 1 + ºCURVA).Value, 0)
                 For ºP = 262 To ThisWorkbook.Sheets("BD_CAD_VND").Cells(461, 1 + ºCURVA).End(xlUp).Row
                     Set ºLi = CadastroUnidades.LV_Curva_LCTO.ListItems.Add(, , Format(ThisWorkbook.Sheets("BD_CAD_VND").Cells(ºP, 1 + ºCURVA).Value, "0.00000%"))
                     ºLi.SubItems(1) = ºINICIO + ºP - 262
@@ -3463,16 +3519,16 @@ chamarform:
     
     For ºL = 2 To ThisWorkbook.Sheets("Lançamentos").Cells(Rows.Count, 2).End(xlUp).Row
         If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 2).Value = "MARKETING %" Then
-            ºAlocado_Marketing = FormatDouble(ºAlocado_Marketing) + FormatDouble(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value)
+            ºAlocado_Marketing = ºAlocado_Marketing + ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value
         End If
         If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 2).Value = "E-BUSINESS" Then
-            ºAlocado_EBusiness = FormatDouble(ºAlocado_EBusiness) + FormatDouble(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value)
+            ºAlocado_EBusiness = ºAlocado_EBusiness + ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value
         End If
         If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 2).Value = "PDV" Then
-            ºAlocado_PDV = FormatDouble(ºAlocado_PDV) + FormatDouble(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value)
+            ºAlocado_PDV = ºAlocado_PDV + ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value
         End If
         If ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 2).Value = "PRÊMIO" Then
-            ºAlocado_Prêmio = FormatDouble(ºAlocado_Prêmio) + FormatDouble(ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value)
+            ºAlocado_Prêmio = ºAlocado_Prêmio + ThisWorkbook.Sheets("Lançamentos").Cells(ºL, 9).Value
         End If
     Next
     
@@ -3512,7 +3568,10 @@ chamarform:
     Next
     
     
+    
     If ºTexto_Alerta <> "Foram identificados os seguintes erros no estudo:" Then
         MsgBox (ºTexto_Alerta)
     End If
 End Sub
+
+

@@ -60,6 +60,7 @@ chamarform:
         Call CarregarPerfil
         Call CarregarFases
         Call CarregarCurvasOB
+        Call CarregarCurvasLB
         Call TotalizarCusto
         Call CarregarInfosTerreno
         Call Carregar_CB_PERIODICIDADE
@@ -313,6 +314,7 @@ fim:
      
     Application.DisplayAlerts = True
 End Sub
+
 
 Sub Selecionar_Empreendimento()
      'VERIFICAÇÃO DE ERRO
@@ -1768,7 +1770,7 @@ chamarform:
                 End If
                 'VERSÃO
                 If Application.IfError(Application.Search("&lt;codigo&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
-                    ºVersão = UCase(Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;codigo&gt;", ""), "&lt;/codigo&gt;", ""))
+                    ºVERSÃO = UCase(Replace(Replace(ºSH_IMP.Range("C" & ºL), "&lt;codigo&gt;", ""), "&lt;/codigo&gt;", ""))
                 End If
                 'DATA BASE
                 If Application.IfError(Application.Search("&lt;base&gt;", ºSH_IMP.Range("C" & ºL).Value), 0) <> 0 Then
@@ -1791,7 +1793,7 @@ chamarform:
                     ºPLANILHAS = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS - 1).Name) + 1, "000000")
                     Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("A" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(ºPLANILHAS - 2, "000000")
                     Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("B" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
-                    Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Range("B1").Value = ºCodEmp_ & "-" & ºVersão & "|" & ºDESCRIÇÃO
+                    Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Range("B1").Value = ºCodEmp_ & "-" & ºVERSÃO & "|" & ºDESCRIÇÃO
                     Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
                     Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
                     Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
@@ -1804,7 +1806,7 @@ chamarform:
                 '----------------------------------------------------------------------------------------
                         
                     ºNOME_EMP (ºEMPREENDIMENTO)
-                    ºNOME_VERSÃO (ºCodEmp_ & "-" & ºVersão & "|" & ºDESCRIÇÃO)
+                    ºNOME_VERSÃO (ºCodEmp_ & "-" & ºVERSÃO & "|" & ºDESCRIÇÃO)
                     ºCOD_VERSÃO (ºPLANILHAS)
                     ºCODIGO_EMP (ºCODIGO_)
                     If ºDatabA <> "" Then
@@ -1838,7 +1840,7 @@ chamarform:
                 ºPLANILHAS = Format(CDbl(Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Name) + 1, "000000")
                 Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("A" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = ºPLANILHAS
                 Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("B" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = UCase(Environ("Username"))
-                Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Range("B1").Value = ºCodEmp_ & "-" & ºVersão & "|" & ºDESCRIÇÃO
+                Workbooks(ºARQUIVO).Sheets(ºPLANILHAS).Range("B1").Value = ºCodEmp_ & "-" & ºVERSÃO & "|" & ºDESCRIÇÃO
                 Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
                 Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("C" & Workbooks(ºARQUIVO).Sheets.Count + 3).Value = Format(Now, "HH:MM DD/MM/YY")
                 Workbooks(ºARQUIVO).Sheets("CONTROLE").Range("F" & Workbooks(ºARQUIVO).Sheets.Count + 3).NumberFormat = "@"
@@ -1850,7 +1852,7 @@ chamarform:
                 '                                   Nome
                 '----------------------------------------------------------------------------------------
                 ºNOME_EMP (ºEMPREENDIMENTO)
-                ºNOME_VERSÃO (ºCodEmp_ & "-" & ºVersão & "|" & ºDESCRIÇÃO)
+                ºNOME_VERSÃO (ºCodEmp_ & "-" & ºVERSÃO & "|" & ºDESCRIÇÃO)
                 ºCOD_VERSÃO (ºPLANILHAS)
                 ºCODIGO_EMP (Format(ºCod, "000000"))
                 If ºDatabA <> "" Then
@@ -2396,7 +2398,7 @@ chamarform:
                         ºSH_BD.Range("F" & 209 + ºI).Value = ºCUSTO_T / B
                         ºSH_BD.Range("I" & 209 + ºI).Value = Format(Replace(ºTX_ADM_E, ".", ",") * 1 / 100, "0.00%")
                         ºSH_BD.Range("K" & 209 + ºI).Value = ºINI_OBRA
-                        'ºSH_BD.Cells(261, 1 + ºI).Value = ºINI_OBRA
+                        ºSH_BD.Cells(261, 1 + ºI).Value = ºINI_OBRA
                         For ºC = 3 To 33
                             If ºSH_BD.Range("C" & ºC).Value = ºI Then
                                 'UNIDADES
@@ -2702,7 +2704,5 @@ chamarform:
     ºExport.Close
     MsgBox "Arquivo exportado com sucesso em " & ºWB.Path & "\" & ºNome & ºN & ".vcw", , ""
 End Sub
-
-
 
 
